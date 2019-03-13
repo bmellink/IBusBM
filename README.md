@@ -1,25 +1,29 @@
-# IBusBM
-Arduino library for RC IBUS protocol - servo (receive) and sensors/telemetry (send) using hardware UART
+# Arduino RC IBus protocol handler
+Arduino library for RC IBUS protocol - servo (receive) and sensors/telemetry (send) using hardware UART.
 
-The IBUS protocol is a half duplex protocol developed by flysky to control multiple servos and motors using a single digital line.
+The IBUS protocol is a half-duplex protocol developed by Flysky to control multiple servos and motors using a single digital line.
 The protocol can also connect sensors to send back telemetry information to a RC transceiver. Currently the protocol only supports 3 sensor types: Voltage, Temperature and Motor speed (RPM). You can define up to 10 sensors using this library.
 
-This library was written and tested for the TGY-IA6B receiver, but should work for other receivers too.
+This library was written and tested for the TGY-IA6B receiver and should work for other receivers too.
 The TGY-IA6B has 2 ibus pins: one for the servos (only output) and one for the sensors/telemetry
-(which uses a half duplex protocol to switch between output and input to poll the sensors)
+(which uses a half-duplex protocol to switch between output and input to poll for sensor data).
 
 ## Getting Started
 
-To install this library use the **Clone or download > Download ZIP** button on the repository home page and then install the library via **Sketch > Include Library > Add .ZIP Library...**
+To install this library use the **Clone or download > Download ZIP** button on the repository home page and then install the library in your Arduino environment using **Sketch > Include Library > Add .ZIP Library...**
+
+This library is for AVR based Arduino boards only.
 
 ### Prerequisites
 
-The IBUS library requires a dedicated hardware serial (UART) port on the Arduino board. If your board only has one free UART port you can still use that port for serial debug communication with your PC at 115200 baud if you plan to use servo output mode only. The ATMEGA boards typically have more than one UART port.
+The IBUS library requires a dedicated hardware serial (UART) port on the Arduino board. If your board only has one UART port you can still use that port for serial debug communication with your PC as long as you plan to use servo output mode only (the baud rate will be fixed at 115200 baud and you should only attach the UART TX pin to the USB-Serial converter). The ATMEGA boards typically have more than one UART port.
 
 You have three options:
 - If you plan to **only use servo output** IBUS data, you only need to connect the IBUS servo output pin from your receiver to the RX pin of the allocated UART. The TX pin of the UART will not be used by the library as there is no information sent back to the RC receiver.
-- If you plan to **only use sensors** IBUS data, you will need to connect the IBUS sensor pin to both the RX and TX pin of the allocated UART. You need to include a diode (such as 1N4148) between the Arduino TX pin and the wire between the IBUS pin and the Arduino RX pin (kathody/solid ring of diode connected at Arduino TX pin) to handle the half-duplex protocol over a single wire.
+- If you plan to **only use sensors** IBUS data, you will need to connect the IBUS sensor pin to both the RX and TX pin of the allocated UART. You need to include a diode (such as 1N4148) between the Arduino TX pin and the wire between the IBUS pin and the Arduino RX pin (cathode/solid ring of diode connected at Arduino TX pin) to handle the half-duplex protocol over a single wire.
 - If you plan to **use both servo output and sensors**, your can use two different UART ports on your Arduino (see above) or use a single UART with a specific hardware circuit to tie the ports together. Please refer to the file xxxxxxxxx for the circuit design.
+
+The main function to call for each IBUS instance is the IBus.loop() function. This function will process all characters that have been received by the serial interface and stored in the interteal buffer allocated by the standard hardware serial interface. For servo output you can call this function from within your main program loop() if you only need new servo data. Sensor communication is more time sensitive and the IBus.loop() function needs to be called at least once ever millisecond to guarantee no data is lost (see (https://github.com/betaflight/betaflight/wiki/Single-wire-FlySky-(IBus)-telemetry) for more details). The second example below shows how to use timer0 to realize this.
 
 ### Example code for servo output only
 
@@ -69,23 +73,24 @@ uint16_t speed=0;
 uint16_t temp=TEMPBASE+200; // start at 20'C
 
 void setup() {
-  // initialize serial port for debug
+  // initialize serial 0 port for debug messages on your PC
   Serial.begin(115200);
 
   // IBUS servo connected to RX of serial1 port
   IBusServo.begin(Serial1);
 
-  // IBUS sensor connected to RX + TX of serial2 port (diode added to TX line)
+  // IBUS sensor connected to RX + TX of serial2 port (1N4148 diode included in TX line - cathode connected to TX)
   IBusSensor.begin(Serial2);
   
   Serial.println("Start IBUS");
 
-  // adding 2 sensors
+  // adding 2 sensors to generate some dummy data
   IBus.addSensor(IBUSS_RPM);
   IBus.addSensor(IBUSS_TEMP);
 
+  // we need to process the IBUS sensor protocol handler frequently enough (at least once each ms) to ensure the response data
+  // from the sensor is sent on time to the receiver
   // Timer0 is already used for millis() - we'll just interrupt somewhere in the middle and call the TIMER0_COMPA_vect interrupt
-  // we need to process the IBUS sensor protocol handler here to ensure it always runs on time and we reply back sensor data to the receiver
   OCR0A = 0xAF;
   TIMSK0 |= _BV(OCIE0A);
 }
@@ -109,15 +114,14 @@ void loop() {
   delay(500);
 }
 
-// Interrupt on timer0 - called as part of timer0 - which is running at 1ms intervals (internally used for millis()
-// we call the IBus.loop() here, so we are certain we respond on sensor request in a timely matter
+// Interrupt on timer0 - called every 1 ms
+// we call the IBusSensor.loop() here, so we are certain we respond to sensor requests in a timely matter
 SIGNAL(TIMER0_COMPA_vect) {
   IBusSensor.loop();  // gets new servo values if available and process any sensor data
+  // optionally add other code here you want to run every 1ms
 }
 
 ```
-
-
 
 ## Sensor types
 

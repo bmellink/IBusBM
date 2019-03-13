@@ -1,3 +1,5 @@
+#include <IBusBM.h>
+
 /*
   Monitor IBUS signals and show output on the serial monitor
   
@@ -33,16 +35,15 @@
   #define IBUSS_INTV 0 // Internal voltage (in 0.01)
   #define IBUSS_TEMP 1 // Temperature (in 0.1 degrees, where 0=-40'C)
   #define IBUSS_RPM  2 // RPM
-  #define IBUSS_EXTV 3 // External voltage (in 0.01
+  #define IBUSS_EXTV 3 // External voltage (in 0.1V)
 
 */
 
-#include "IBusBM.h"
-IBusBM IBus; // should actually be volatile as this may be interrupt driven
+IBusBM IBus; 
 
 void setup() {
-  // initialize serial port for monitor
-  Serial.begin(115200,SERIAL_8N1);
+  // initialize serial port for debug
+  Serial.begin(115200);
 
   // IBUS connected to serial1
   IBus.begin(Serial1);
@@ -63,8 +64,8 @@ void setup() {
 #define TEMPBASE 400    // base value for 0'C
 
 // sensor values
-int speed=0;
-int temp=TEMPBASE+20; // start at 20'C
+uint16_t speed=0;
+uint16_t temp=TEMPBASE+200; // start at 20'C
 
 void loop() {
   // show first 8 servo channels
@@ -74,15 +75,13 @@ void loop() {
   }
   Serial.print("Cnt=");
   Serial.print(IBus.cnt_rec); // count of how many times servo values have been updated
-  Serial.print(" S1=");
-  Serial.print(IBus.sensor1); // count of polling for sensor existance
-  Serial.print(" S2=");
-  Serial.print(IBus.sensor2); // count of polling for sensor type
-  Serial.print(" S3=");
-  Serial.println(IBus.sensor3); // count of polling for sensor value
+  Serial.print(" POLL=");
+  Serial.print(IBus.cnt_poll); // count of polling for sensor existance
+  Serial.print(" Sensor=");
+  Serial.println(IBus.cnt_sensor); // count of polling for sensor value
   
   IBus.setSensorMeasurement(1,speed);
-  speed +=20;                           // increase motor speed by 10 RPM
+  speed += 10;                           // increase motor speed by 10 RPM
   IBus.setSensorMeasurement(2,temp++); // increase temperature by 0.1 'C every loop
   delay(500);
 }
