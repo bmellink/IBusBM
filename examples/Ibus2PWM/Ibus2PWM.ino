@@ -9,7 +9,7 @@
 
   Serial port RX/TX connected as follows:
   - RX connected to the ibus servo pin
-  - TX left open or connected to the USB/Serial converter to display debug information on your PC
+  - TX left open or connected to the USB/Serial converter to display debug information on your PC (set baud rate to 115200)
 
 */
 
@@ -34,7 +34,7 @@ void loop() {
     Serial.print(val); // display new value
     Serial.print(" ");
     saveval = val;    
-    val = map(val, 0, 1023, 0, 180);     // scale it to use it with the servo (value between 0 and 180)
+    val = map(val, 700, 1500, 0, 180);     // scale it to use it with the servo (value between 0 and 180)
     myservo.write(val);                  // sets the servo position according to the scaled value
   }
   

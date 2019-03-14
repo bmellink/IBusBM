@@ -61,7 +61,7 @@ SIGNAL(TIMER0_COMPA_vect) {
 
 void IBusBM::begin(HardwareSerial& serial) {
   serial.begin(115200);
-  begin((Stream&)serial, false);
+  begin((Stream&)serial);
 }
 
 

@@ -27,32 +27,28 @@ The main function to call for each IBUS instance is the IBus.loop() function. Th
 
 ### Example code for servo output only
 
-This example is for the MEGA 2560 board
+This example is for any Arduino board
 
 ```
 #include <IBusBM.h>
+#include <Servo.h>
 
-IBusBM IBus;
+IBusBM IBus; // IBus object
+Servo myservo;  // create servo object to control a servo
 
 void setup() {
-  // initialize serial port for debug
-  Serial.begin(115200);
-
-  // IBUS connected to RX of serial1 port
-  IBus.begin(Serial1);
-  
-  Serial.println("Start IBUS");
+  IBus.begin(Serial);    // IBUS connected to serial
+  myservo.attach(9);  // attaches the servo on pin 9 to the servo object
 }
 
 void loop() {
-  // show first 8 servo channels
-  for (int i=0; i<8 ; i++) {
-    Serial.print(IBus.readChannel(i), HEX);
-    Serial.print(" ");
-  }
-  Serial.print("Cnt=");
-  Serial.println(IBus.cnt_rec); // count of how many times servo values have been updated
-  delay(500);
+  int val;
+  val = IBus.readChannel(0); // get latest value for servo channel 0
+
+  val = map(val, 0, 1023, 0, 180);     // scale it to use it with the servo (value between 0 and 180)
+  myservo.write(val);                  // sets the servo position according to the scaled value
+  
+  delay(20);
 }
 
 ```
@@ -140,5 +136,5 @@ The following sensor types are defined in IBusBM.h:
 
 Example sketches:
 
-- Ibus2PWM: converts ibus data to Servo PWM format: Reads data from first servo channel and translates this to PWM signal to send to a traditional servo
-- Ibus_monitor: print out servo channels to the standard serial output (PC debug window) and simulate 2 sensors with random values sent back to transmitter. Requires Arduino board with 2 or more hardware serial ports (such as MEGA 2560)
+- **Ibus2PWM**: converts ibus data to Servo PWM format: Reads data from first servo channel and translates this to PWM signal to send to a traditional servo
+- **Ibus_monitor**: print out servo channels to the standard serial output (PC debug window) and simulate 2 sensors with random values sent back to transmitter. Requires Arduino board with 2 or more hardware serial ports (such as MEGA 2560)
