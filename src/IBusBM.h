@@ -16,6 +16,8 @@
  *   
  * Created 12 March 2019 Bart Mellink
  */
+#ifndef IBusBM_h
+#define IBusBM_h
 
 #include <inttypes.h>
 
@@ -30,17 +32,15 @@ class Stream;
 class IBusBM {
 public:
   void begin(HardwareSerial& serial);
-  void begin(HardwareSerial& serial, bool enablesensor);
-  void begin(Stream& stream, bool enablesensor);
-  void loop(void);
+  void begin(Stream& stream);
+  void loop(void); // used internally
   uint16_t readChannel(uint8_t channelNr); // read servo channel 0..9
   uint8_t addSensor(uint8_t type); // usually 2, returns address
   void setSensorMeasurement(uint8_t adr, uint16_t value);
   
-  uint8_t cnt_poll;
-  uint8_t cnt_sensor;
+  uint8_t cnt_poll; // count received number of sensor poll messages
+  uint8_t cnt_sensor; // count times a sensor value has been sent back
   uint8_t cnt_rec; // count received number of servo messages
-  uint8_t cnt_err; // count error protocol 
   
 private:
   enum State {GET_LENGTH, GET_DATA, GET_CHKSUML, GET_CHKSUMH, DISCARD};
@@ -66,7 +66,10 @@ private:
   uint8_t lchksum;
   uint8_t sensorType[SENSORMAX]; 
   uint16_t sensorValue[SENSORMAX]; 
-  uint8_t sensorCount;
-  bool enablesensor;
+  uint8_t NumberSensors;
+  // pointer to the next class instance to be used to call the loop() method from timer interrupt
+  IBusBM* IBusBMnext = NULL;
 };
 
+
+#endif

@@ -12,7 +12,7 @@ The TGY-IA6B has 2 ibus pins: one for the servos (only output) and one for the s
 
 To install this library use the **Clone or download > Download ZIP** button on the repository home page and then install the library in your Arduino environment using **Sketch > Include Library > Add .ZIP Library...**
 
-This library is for AVR based Arduino boards only.
+This library is for AVR based Arduino boards only (Arduino MEGA, UNO, Nano, Micro, etc.).
 
 ### Prerequisites
 
@@ -45,7 +45,6 @@ void setup() {
 }
 
 void loop() {
-  IBus.loop();
   // show first 8 servo channels
   for (int i=0; i<8 ; i++) {
     Serial.print(IBus.readChannel(i), HEX);
@@ -87,16 +86,9 @@ void setup() {
   // adding 2 sensors to generate some dummy data
   IBus.addSensor(IBUSS_RPM);
   IBus.addSensor(IBUSS_TEMP);
-
-  // we need to process the IBUS sensor protocol handler frequently enough (at least once each ms) to ensure the response data
-  // from the sensor is sent on time to the receiver
-  // Timer0 is already used for millis() - we'll just interrupt somewhere in the middle and call the TIMER0_COMPA_vect interrupt
-  OCR0A = 0xAF;
-  TIMSK0 |= _BV(OCIE0A);
 }
 
 void loop() {
-  IBusServo.loop(); // read the latest servo values
   // show first 8 servo channels
   for (int i=0; i<8 ; i++) {
     Serial.print(IBusServo.readChannel(i), HEX);
@@ -114,14 +106,24 @@ void loop() {
   delay(500);
 }
 
-// Interrupt on timer0 - called every 1 ms
-// we call the IBusSensor.loop() here, so we are certain we respond to sensor requests in a timely matter
-SIGNAL(TIMER0_COMPA_vect) {
-  IBusSensor.loop();  // gets new servo values if available and process any sensor data
-  // optionally add other code here you want to run every 1ms
-}
-
 ```
+
+## Class member functions and data members
+
+The IBusBM class exposes the following functions:
+
+- void begin(HardwareSerial& serial); // initialization with defined hardware serial port
+- uint16_t readChannel(uint8_t channelNr); // read the value of servo channel 0..9
+- uint8_t addSensor(uint8_t type); // defines new sensor of type type, returns sensor number (first is number 1)
+- void setSensorMeasurement(uint8_t adr, uint16_t value); // set value of sensor number adr to value (first sensor is numer 1)
+
+The IBusBM class exposes the following counters. Counters are 1 byte (value 0..255) and values can be used by your code to understand if new data is available. 
+
+- uint8_t cnt_rec; // count received number of servo messages
+- uint8_t cnt_poll; // count received number of sensor poll messages
+- uint8_t cnt_sensor; // count times a sensor value has been sent back
+
+Counters can also be used to debug the hardware connections between the receiver and the Arduino board: If at least one sensor is defined, the RX pin will receive sensor poll messages (incrementing cnt_poll approximately evenry 7ms). Only if the TX pin is correctly connected to the receiver, the cnt_sensor counter will increment at the same rate as cnt_poll.
 
 ## Sensor types
 
@@ -134,3 +136,9 @@ The following sensor types are defined in IBusBM.h:
 #define IBUSS_EXTV 3 // External voltage (in 0.01
 ```
 
+## Examples
+
+Example sketches:
+
+- Ibus2PWM: converts ibus data to Servo PWM format: Reads data from first servo channel and translates this to PWM signal to send to a traditional servo
+- Ibus_monitor: print out servo channels to the standard serial output (PC debug window) and simulate 2 sensors with random values sent back to transmitter. Requires Arduino board with 2 or more hardware serial ports (such as MEGA 2560)

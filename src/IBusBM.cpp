@@ -20,8 +20,21 @@
 #include <Arduino.h>
 #include "IBusBM.h"
 
+
+// pointer to the first class instance to be used to call the loop() method from timer interrupt
+// will be initiated by class constructor, then daisy channed to other class instances if we have more than one
+IBusBM* IBusBMfirst = NULL;
+
+
+// Interrupt on timer0 - called every 1 ms
+// we call the IBusSensor.loop() here, so we are certain we respond to sensor requests in a timely matter
+SIGNAL(TIMER0_COMPA_vect) {
+  if (IBusBMfirst) IBusBMfirst->loop();  // gets new servo values if available and process any sensor data
+}
+
+
 /*
- *   has max 10 channels in this lib (with messagelength of 0x20 there is room for 14 channels)
+ *   has max 14 channels in this lib (with messagelength of 0x20 there is room for 14 channels)
 
   Example set of bytes coming over the line for setting your servo's: 
     20 40 DB 5 DC 5 54 5 DC 5 E8 3 D0 7 D2 5 E8 3 DC 5 DC 5 DC 5 DC 5 DC 5 DC 5 DA F3
@@ -42,7 +55,7 @@
     Channel 11: DC 5 -> value 0x5DC
     Channel 12: DC 5 -> value 0x5DC
     Channel 13: DC 5 -> value 0x5DC
-    Checksum: DA F3
+    Checksum: DA F3 -> calculated by adding up all previous bytes, total must be FFFF
  */
 
 
@@ -51,12 +64,8 @@ void IBusBM::begin(HardwareSerial& serial) {
   begin((Stream&)serial, false);
 }
 
-void IBusBM::begin(HardwareSerial& serial, bool enablesensor) {
-  serial.begin(115200);
-  begin((Stream&)serial, enablesensor);
-}
 
-void IBusBM::begin(Stream& stream,  bool enablesensor) {
+void IBusBM::begin(Stream& stream) {
   this->stream = &stream;
   this->state = DISCARD;
   this->last = millis();
@@ -64,11 +73,24 @@ void IBusBM::begin(Stream& stream,  bool enablesensor) {
   this->len = 0;
   this->chksum = 0;
   this->lchksum = 0;
-  this->enablesensor = enablesensor;
+
+  this->IBusBMnext = IBusBMfirst;
+  IBusBMfirst = this; // !!!!!!!!!!!!!!!!!!!!!need to test
+  // we need to process the IBUS sensor protocol handler frequently enough (at least once each ms) to ensure the response data
+  // from the sensor is sent on time to the receiver
+  // Timer0 is already used for millis() - we'll just interrupt somewhere in the middle and call the TIMER0_COMPA_vect interrupt
+  OCR0A = 0xAF;
+  TIMSK0 |= _BV(OCIE0A);
 }
 
 void IBusBM::loop(void) {
+
+  // if we have multiple instances of IBusBM, we (recursively) first need to call the other ones
+  if (IBusBMnext) IBusBMnext->loop(); 
+
+  // only process data already in our UART receive buffer 
   while (stream->available() > 0) {
+    // only consider a new data package if we have not heard anything for >3ms
     uint32_t now = millis();
     if (now - last >= PROTOCOL_TIMEGAP){
       state = GET_LENGTH;
@@ -76,7 +98,7 @@ void IBusBM::loop(void) {
     last = now;
     
     uint8_t v = stream->read();
-    switch (state){
+    switch (state) {
       case GET_LENGTH:
         if (v <= PROTOCOL_LENGTH && v > PROTOCOL_OVERHEAD) {
           ptr = 0;
@@ -84,7 +106,6 @@ void IBusBM::loop(void) {
           chksum = 0xFFFF - v;
           state = GET_DATA;
         } else {
-          cnt_err++;
           state = DISCARD;
         }
         break;
@@ -113,7 +134,7 @@ void IBusBM::loop(void) {
               channel[i / 2] = buffer[i] | (buffer[i + 1] << 8);
             }
             cnt_rec++;
-          } else if (adr<=sensorCount && adr>0 && len==1 && enablesensor) {
+          } else if (adr<=NumberSensors && adr>0 && len==1) {
             // all sensor data commands go here
             // we only process the len==1 commands (=message length is 4 bytes incl overhead) to prevent the case the
             // return messages from the UART TX port loop back to the RX port and are processed again. This is extra
@@ -174,14 +195,16 @@ uint16_t IBusBM::readChannel(uint8_t channelNr) {
 
 uint8_t IBusBM::addSensor(uint8_t type) {
   // add a sensor, return sensor number
-  if (sensorCount < SENSORMAX) {
-    sensorCount++;
-    sensorType[sensorCount] = type;
+  if (NumberSensors < SENSORMAX) {
+    NumberSensors++;
+    sensorType[NumberSensors] = type;
   }
-  return sensorCount;
+  return NumberSensors;
 }
 
 void IBusBM::setSensorMeasurement(uint8_t adr, uint16_t value){
-   if (adr<=sensorCount)
+   if (adr<=NumberSensors)
      sensorValue[adr] = value;
 }
+
+
