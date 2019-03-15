@@ -1,14 +1,6 @@
 /*
  * Interface to the RC IBus protocol
  * 
- * Based on original work from: https://gitlab.com/timwilkinson/FlySkyIBus
- * Extended to also handle sensors/telemetry data to be sent back to the transmitter
- * This lib requires a hardware UART for communication
- * Another version using software serial is here https://github.com/Hrastovc/iBUStelemetry)
- * 
- * Explaination of sensor/ telemetry prtocol and the circuit (R + diode) to combine the two pins here: 
- * https://github.com/betaflight/betaflight/wiki/Single-wire-FlySky-(IBus)-telemetry
- * 
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public 
  * License as published by the Free Software Foundation; either  
@@ -30,13 +22,15 @@ class HardwareSerial;
 class Stream;
 
 class IBusBM {
+
 public:
   void begin(HardwareSerial& serial);
   void begin(Stream& stream);
-  void loop(void); // used internally
   uint16_t readChannel(uint8_t channelNr); // read servo channel 0..9
   uint8_t addSensor(uint8_t type); // usually 2, returns address
   void setSensorMeasurement(uint8_t adr, uint16_t value);
+
+  void loop(void); // used internally for interrupt handline, but needs to be defined as public
   
   uint8_t cnt_poll; // count received number of sensor poll messages
   uint8_t cnt_sensor; // count times a sensor value has been sent back
@@ -55,21 +49,19 @@ private:
   static const uint8_t PROTOCOL_COMMAND_VALUE = 0xA0;    // Command send sensor data (lowest 4 bits are sensor)
   static const uint8_t SENSORMAX = 10; // Max number of sensors
   
-  uint8_t state;
-  Stream* stream;
-  uint32_t last;
-  uint8_t buffer[PROTOCOL_LENGTH];
-  uint8_t ptr;
-  uint8_t len;
-  uint16_t channel[PROTOCOL_CHANNELS];
-  uint16_t chksum;
-  uint8_t lchksum;
-  uint8_t sensorType[SENSORMAX]; 
-  uint16_t sensorValue[SENSORMAX]; 
-  uint8_t NumberSensors;
-  // pointer to the next class instance to be used to call the loop() method from timer interrupt
-  IBusBM* IBusBMnext = NULL;
+  uint8_t state;  // state machine state for iBUS protocol
+  Stream* stream; // serial port
+  uint32_t last;  // milis() of prior message
+  uint8_t buffer[PROTOCOL_LENGTH]; // message buffer
+  uint8_t ptr; // pointer in buffer
+  uint8_t len; // message length
+  uint16_t channel[PROTOCOL_CHANNELS]; // servo data received
+  uint16_t chksum; // checksum calculation
+  uint8_t lchksum; // checksum lower byte received
+  uint8_t sensorType[SENSORMAX];  // sensor types for defined sensors
+  uint16_t sensorValue[SENSORMAX];  // sensor data for defined sensors
+  uint8_t NumberSensors; // number of sensors
+  IBusBM* IBusBMnext = NULL;  // pointer to the next class instance to be used to call the loop() method from timer interrupt
 };
-
 
 #endif

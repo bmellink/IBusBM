@@ -2,11 +2,13 @@
  * Interface to the RC IBus protocol
  * 
  * Based on original work from: https://gitlab.com/timwilkinson/FlySkyIBus
- * Extended to also handle sensors/telemetry data to be sent back to the transmitter
+ * Extended to also handle sensors/telemetry data to be sent back to the transmitter,
+ * interrupts driven and other features.
+ *
  * This lib requires a hardware UART for communication
- * Another version using software serial is here https://github.com/Hrastovc/iBUStelemetry)
+ * Another version using software serial is here https://github.com/Hrastovc/iBUStelemetry
  * 
- * Explaination of sensor/ telemetry prtocol and the circuit (R + diode) to combine the two pins here: 
+ * Explaination of sensor/ telemetry prtocol here: 
  * https://github.com/betaflight/betaflight/wiki/Single-wire-FlySky-(IBus)-telemetry
  * 
  * This library is free software; you can redistribute it and/or
@@ -34,9 +36,9 @@ SIGNAL(TIMER0_COMPA_vect) {
 
 
 /*
- *   has max 14 channels in this lib (with messagelength of 0x20 there is room for 14 channels)
+ *  supports max 14 channels in this lib (with messagelength of 0x20 there is room for 14 channels)
 
-  Example set of bytes coming over the line for setting your servo's: 
+  Example set of bytes coming over the iBUS line for setting servos: 
     20 40 DB 5 DC 5 54 5 DC 5 E8 3 D0 7 D2 5 E8 3 DC 5 DC 5 DC 5 DC 5 DC 5 DC 5 DA F3
   Explanation
     Protocol length: 20
@@ -74,18 +76,18 @@ void IBusBM::begin(Stream& stream) {
   this->chksum = 0;
   this->lchksum = 0;
 
-  this->IBusBMnext = IBusBMfirst;
-  IBusBMfirst = this; // !!!!!!!!!!!!!!!!!!!!!need to test
-  // we need to process the IBUS sensor protocol handler frequently enough (at least once each ms) to ensure the response data
+  // we need to process the iBUS sensor protocol handler frequently enough (at least once each ms) to ensure the response data
   // from the sensor is sent on time to the receiver
   // Timer0 is already used for millis() - we'll just interrupt somewhere in the middle and call the TIMER0_COMPA_vect interrupt
+  this->IBusBMnext = IBusBMfirst;
+  IBusBMfirst = this; 
   OCR0A = 0xAF;
   TIMSK0 |= _BV(OCIE0A);
 }
 
 void IBusBM::loop(void) {
 
-  // if we have multiple instances of IBusBM, we (recursively) first need to call the other ones
+  // if we have multiple instances of IBusBM, we (recursively) call the other instances loop() function
   if (IBusBMnext) IBusBMnext->loop(); 
 
   // only process data already in our UART receive buffer 
