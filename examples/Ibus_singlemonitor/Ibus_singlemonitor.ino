@@ -5,8 +5,8 @@
   such as the Flysky FS-iA8X (from specs, not tested yet). The TGY-IA6C also has
   one iBUS pin but only supports servo control signals and does not support external telemetry sensors.
   
-  Requires Arduino board with multiple UARTs (such as ATMEGA 2560)
-  - serial0 - monitor output (debug output to PC)
+  Requires Arduino board with multiple UARTs (such as ATMEGA 2560 or Micro)
+  - serial0 - monitor output (debug output to PC, this is through the build-in USB)
   - serial1 - connected to the ibus receiver pin
 
   Hardware connections to setup/test if you have a receiver with 1 ibus pins:

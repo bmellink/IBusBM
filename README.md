@@ -1,5 +1,5 @@
 # Arduino RC IBus protocol handler
-Arduino library for RC iBUS protocol - servo (receive) and sensors/telemetry (send) using hardware UART.
+Arduino library for Flysky/Turnigy RC iBUS protocol - servo (receive) and sensors/telemetry (send) using hardware UART.
 
 The iBUS protocol is a half-duplex protocol developed by Flysky to control multiple servos and motors using a single digital line. The values received for each servo channel are between 1000 (hex eE8) and 2000 (hex 7D0) with neutral sub trim setting, which corresponds with the pulse width in microseconds for most servos.
 
@@ -26,7 +26,11 @@ You have three options:
 - If you plan to **only provide sensor** iBUS data from your sketch, you will need to connect the iBUS sensor pin to both the RX and TX pin of the allocated UART. You need to include a diode (such as 1N4148) between the Arduino TX pin and the wire between the iBUS pin and the Arduino RX pin (cathode/solid ring of diode connected at Arduino TX pin) to handle the half-duplex protocol over the single iBUS wire.
 - If you plan to **use both servo output and sensor data** in your sketch, your should use two different UART ports on your Arduino board.
 
-For more information on the iBUS protocol, see (https://github.com/betaflight/betaflight/wiki/Single-wire-FlySky-(IBus)-telemetry).
+For more information on the iBUS protocol, see (https://github.com/betaflight/betaflight/wiki/Single-wire-FlySky-(IBus)-telemetry). (please skip over the first part of the article how to combine the servo output and sensor data pins of the TGY receiver as it is more reliable to use two different UART ports on your Arduino if you need both servo and sensor data in your sketch).
+
+### Example wiring
+
+![Wiring with MEGA 2560](wiring.png?raw=true "Wiring with MEGA 2560")
 
 ### Example code for servo output only
 
