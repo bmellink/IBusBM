@@ -1,11 +1,11 @@
-# Arduino RC IBus protocol handler
+# Arduino RC iBus protocol handler
 Arduino library for Flysky/Turnigy RC iBUS protocol - servo (receive) and sensors/telemetry (send) using hardware UART.
 
 The iBUS protocol is a half-duplex protocol developed by Flysky to control multiple servos and motors using a single digital line. The values received for each servo channel are between 1000 (hex eE8) and 2000 (hex 7D0) with neutral sub trim setting, which corresponds with the pulse width in microseconds for most servos.
 
 The protocol can also connect sensors to send back telemetry information to a RC transceiver. Currently the protocol only supports 3 sensor types: Voltage, Temperature and Motor speed (RPM). You can define up to 10 sensors using this library.
 
-This library was written and tested for the TGY-IA6B receiver and should work for other receivers too.
+This library was written and tested for the TGY-IA6B receiver and should work for other receivers too (such as the FS-iA10 and TGY-iA10).
 The TGY-IA6B has 2 iBUS pins: one for the servos (only output) and one for the sensors/telemetry
 (which uses a half-duplex protocol to switch between output and input to poll for sensor data).
 
