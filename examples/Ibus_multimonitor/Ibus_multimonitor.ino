@@ -16,8 +16,8 @@
   2. As 1 and also connect the serial2 (RX2) pin to the ibus sensor/telemetry pin 
      --> you should see the polling counter change (the variable IBus.cnt_poll will increment every 7ms, 
      but the sensor data will not be sent back to your transmitter)
-  3. As 1+2 and also connect the serial2 (TX2) pin to the RX2/ibus connection from step 2 using a diode 
-     (1N4148 or similar with cathode=white ring of the diode at the side of TX2) 
+  3. As 1+2 and also connect the serial2 (TX2) pin to the RX2/ibus connection from step 2 using an 1.2k Ohm
+     resitor or diode (1N4148 or similar with cathode=white ring of the diode at the side of TX2) 
      --> dummy sensor data should be sent back to the receiver (cnt_sensor also changes value)
 
   sensor types defined in IBusBM.h:

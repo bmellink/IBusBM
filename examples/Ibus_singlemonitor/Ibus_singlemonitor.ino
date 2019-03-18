@@ -12,7 +12,7 @@
   Hardware connections to setup/test if you have a receiver with 1 ibus pins:
   1. Only connect the serial1 (RX1) pin to the ibus pin of the receiver 
      --> you should see the servo values on screen
-  2. Connect the serial1 (TX1) pin also to the RX1/ibus connection using a diode
+  2. Connect the serial1 (TX1) pin also to the RX1/ibus connection using an 1.2k Ohm reistor or 1N4148 diode
      (cathode=white ring of the diode at the side of TX2) 
      --> dummy sensor data should be sent back to the receiver (cnt_sensor also changes value)
 

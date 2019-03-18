@@ -23,7 +23,7 @@ The iBUS library requires a dedicated hardware serial (UART) port on the Arduino
 
 You have three options:
 - If you plan to **only use servo output** iBUS data in your sketch, you only need to connect the iBUS servo output pin from your receiver to the RX pin of the allocated UART. The TX pin of the UART will not be used by the library as there is no information sent back to the RC receiver.
-- If you plan to **only provide sensor** iBUS data from your sketch, you will need to connect the iBUS sensor pin to both the RX and TX pin of the allocated UART. You need to include a diode (such as 1N4148) between the Arduino TX pin and the wire between the iBUS pin and the Arduino RX pin (cathode/solid ring of diode connected at Arduino TX pin) to handle the half-duplex protocol over the single iBUS wire.
+- If you plan to **only provide sensor** iBUS data from your sketch, you will need to connect the iBUS sensor pin to both the RX and TX pin of the allocated UART. You need to include a diode (such as 1N4148) between the Arduino TX pin and the wire between the iBUS pin and the Arduino RX pin (cathode/solid ring of diode connected at Arduino TX pin) to handle the half-duplex protocol over the single iBUS wire. See example wiring below. If you only have one sensor connected to the iBUS (i.e. only the Arduino board) you can replace the diode with a resistor of 1.2k Ohm.
 - If you plan to **use both servo output and sensor data** in your sketch, your should use two different UART ports on your Arduino board.
 
 For more information on the iBUS protocol, see (https://github.com/betaflight/betaflight/wiki/Single-wire-FlySky-(IBus)-telemetry). (please skip over the first part of the article how to combine the servo output and sensor data pins of the TGY receiver as it is more reliable to use two different UART ports on your Arduino if you need both servo and sensor data in your sketch).
@@ -31,6 +31,8 @@ For more information on the iBUS protocol, see (https://github.com/betaflight/be
 ### Example wiring
 
 ![Wiring with MEGA 2560](wiring.png?raw=true "Wiring with MEGA 2560")
+
+Note: If no other sensors are connected to the iBUS you have the option to replace the diode with an 1.2k Ohm resistor.
 
 ### Example code for servo output only
 
