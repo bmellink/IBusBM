@@ -16,7 +16,9 @@
 #define IBUSS_INTV 0 // Internal voltage (in 0.01)
 #define IBUSS_TEMP 1 // Temperature (in 0.1 degrees, where 0=-40'C)
 #define IBUSS_RPM  2 // RPM
-#define IBUSS_EXTV 3 // External voltage (in 0.01
+#define IBUSS_EXTV 3 // External voltage (in 0.01)
+
+#define IBUSBM_NOTIMER -1 // no timer interrupt used
 
 class HardwareSerial;
 class Stream;
@@ -24,8 +26,7 @@ class Stream;
 class IBusBM {
 
 public:
-  void begin(HardwareSerial& serial);
-  void begin(Stream& stream);
+  void begin(HardwareSerial& serial, int8_t timerid=0, int8_t rxPin=-1, int8_t txPin=-1);
   uint16_t readChannel(uint8_t channelNr); // read servo channel 0..9
   uint8_t addSensor(uint8_t type); // usually 2, returns address
   void setSensorMeasurement(uint8_t adr, uint16_t value);
@@ -50,7 +51,7 @@ private:
   static const uint8_t SENSORMAX = 10; // Max number of sensors
   
   uint8_t state;  // state machine state for iBUS protocol
-  Stream* stream; // serial port
+  HardwareSerial* stream; // serial port
   uint32_t last;  // milis() of prior message
   uint8_t buffer[PROTOCOL_LENGTH]; // message buffer
   uint8_t ptr; // pointer in buffer

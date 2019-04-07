@@ -15,7 +15,7 @@ Receivers with one iBUS pin typically send servo commands over the iBUS line, bu
 
 To install this library use the **Clone or download > Download ZIP** button on the repository home page and then install the library in your Arduino environment using **Sketch > Include Library > Add .ZIP Library...**
 
-This library is for AVR based Arduino boards only (Arduino MEGA, UNO, Nano, Micro, etc.).
+This library supports AVR based Arduino boards (Arduino MEGA, UNO, Nano, Micro, etc.) and ESP32 based boards (ESP32, NodeMCU, etc.).
 
 ### Prerequisites
 
@@ -34,9 +34,9 @@ For more information on the iBUS protocol, see (https://github.com/betaflight/be
 
 Note: If no other sensors are connected to the iBUS you have the option to replace the diode with an 1.2k Ohm resistor.
 
-### Example code for servo output only
+### Example code for servo output only (AVR)
 
-This example is for any Arduino board.
+This example is for any AVR Arduino board. Note: this example is for AVR based boards only as the esp32 library does not support the analogwrite() function used by the servo.h library.
 
 ```
 #include <IBusBM.h>
@@ -46,7 +46,7 @@ IBusBM IBus;    // IBus object
 Servo myservo;  // create servo object to control a servo
 
 void setup() {
-  IBus.begin(Serial);    // iBUS object connected to serial0 RX/RX0 pin
+  IBus.begin(Serial);    // iBUS object connected to serial0 RX pin
   myservo.attach(9);     // attaches the servo on pin 9 to the servo object
 }
 
@@ -69,7 +69,7 @@ Servo myservo1;  // create servo object to control a servo
 Servo myservo2;  // create servo object to control a servo
 
 void setup() {
-  IBus.begin(Serial);    // iBUS object connected to serial0 RX/RX0
+  IBus.begin(Serial);    // iBUS object connected to serial0 RX pin
   myservo1.attach(8);     // attaches the servo on pin 8 to the servo1 object
   myservo2.attach(9);     // attaches the servo on pin 9 to the servo2 object
 }
@@ -85,8 +85,68 @@ void loop() {
 
 ```
 
+### Example code for servo output on ESP32
+
+This example is for any ESP32 board and is based on the Esp32Servo library (https://github.com/madhephaestus/ESP32Servo) that can be downloaded using the Arduino library manager.
+
+```
+#include <IBusBM.h>
+#include <ESP32Servo.h>
+
+IBusBM IBus;    // IBus object
+Servo myservo;  // create servo object to control a servo
+
+// Possible PWM GPIO pins on the ESP32: 0(used by on-board button),2,4,5(used by on-board LED),12-19,21-23,25-27,32-33 
+#define servoPin 18
+
+void setup() {
+  IBus.begin(Serial2,1);        // iBUS object connected to serial2 RX2 pin using timer 1
+  myservo.attach(servoPin);     // attaches the servo on pin 18 to the servo object (using timer 0)
+}
+
+void loop() {
+  int val;
+  val = IBus.readChannel(0); // get latest value for servo channel 1
+  myservo.writeMicroseconds(val);   // sets the servo position 
+  delay(20);
+}
+
+```
+
+
+### Example code for servo output on ESP32 with disabled timer
+
+This example is for any ESP32 board and is based on the Esp32Servo library. In some cases you may need the ESP32 timers for other functions and you want to call the internal loop() function from your own code.
+
+```
+#include <IBusBM.h>
+#include <ESP32Servo.h>
+
+IBusBM IBus;    // IBus object
+Servo myservo;  // create servo object to control a servo
+
+// Possible PWM GPIO pins on the ESP32: 0(used by on-board button),2,4,5(used by on-board LED),12-19,21-23,25-27,32-33 
+#define servoPin 18
+
+void setup() {
+  IBus.begin(Serial2, IBUSBM_NOTIMER);  // iBUS object connected to serial2 RX2 pin using no timer
+  myservo.attach(servoPin);     // attaches the servo on pin 18 to the servo object (using timer 0)
+}
+
+void loop() {
+  int val;
+  iBus.loop(); // call internal loop function to update the communication to the receiver 
+  val = IBus.readChannel(0); // get latest value for servo channel 1
+  myservo.writeMicroseconds(val);   // sets the servo position 
+  delay(20);
+}
+
+```
+
+
 ### Example code for combined servo output and sensor input using two UART ports
-This example is for the MEGA 2560 board
+This example is for the MEGA 2560 and ESP32 boards and will display servo debug information on the screen. 
+No actual code to control a servo control is included in this example (screen display only).
 
 ```
 #include <IBusBM.h>
@@ -104,10 +164,14 @@ void setup() {
   // initialize serial 0 port for debug messages on your PC
   Serial.begin(115200);
 
-  // iBUS servo connected to RX of serial1 port
+  // iBUS servo signal from receiver connected to RX of serial1 port
   IBusServo.begin(Serial1);
+  // The default RX/TX pins for Serial1 on ESP32 boards are pins 9/10 and they are often not
+  // exposed on the printed circuit board. You can change the pin number by replacing the line above with:
+  // IBusServo.begin(Serial1, 1, 21, 22);
 
-  // iBUS sensor connected to RX + TX of serial2 port (1N4148 diode included in TX line - cathode connected to TX)
+  // iBUS sensor signal pins from receiver connected to RX + TX of serial2 port
+  // (1N4148 diode included in TX line - cathode connected to TX)
   IBusSensor.begin(Serial2);
   
   Serial.println("Start iBUS");
@@ -141,16 +205,38 @@ void loop() {
 
 The IBusBM class exposes the following functions:
 
-- void begin(HardwareSerial& serial); // initialization with defined hardware serial port
-- uint16_t readChannel(uint8_t channelNr); // read the value of servo channel 0..9 corresponding with servo channels 1..10
-- uint8_t addSensor(uint8_t type); // defines new sensor of type "type", returns sensor number (first is number 1)
-- void setSensorMeasurement(uint8_t adr, uint16_t value); // set value of sensor number adr to value (first sensor is number 1)
+```
+- void begin(HardwareSerial& serial, int8_t timerid=0, int8_t rxPin=-1, int8_t txPin=-1);
+```
+This initializes the library for a given serial port. rxPin and txPin can be specified for the serial ports 1 and 2 of ESP32 architectures (default to RX1=9, TX1=10, RX2=16, TX2=17). Serial port 0 and ports on AVR boards can not be overruled. The variable timerid specifies the timer used (ESP32 only) to drive the background processing (see below). A value of IBUSBM_NOTIMER disables the timer interrupt and you should call loop() yourself.
+
+```
+uint8_t addSensor(uint8_t type); 
+```
+Defines new sensor of type "type", returns sensor number (first is number 1)
+
+```
+uint16_t readChannel(uint8_t channelNr);
+```
+Read the value of servo channel 0..9 corresponding with servo channels 1..10.
+
+```
+void setSensorMeasurement(uint8_t adr, uint16_t value);
+```
+Set value of sensor number adr to a given value (first sensor is number 1). The background process will send the value back through the receiver.
+
+```
+void loop();
+```
+Call the internal polling function (at least once per 1 ms) in case you disable the timer interrup. See below. If you have multiple instances of the IbusBM class, you only need to call this function for the first instance.
 
 The IBusBM class exposes the following counters. Counters are 1 byte (value 0..255) and values can be used by your code to understand if new data is available. 
 
-- uint8_t cnt_rec; // count received number of servo messages from receiver
-- uint8_t cnt_poll; // count received number of sensor poll messages
-- uint8_t cnt_sensor; // count times a sensor value has been sent back
+```
+uint8_t cnt_rec; // count received number of servo messages from receiver
+uint8_t cnt_poll; // count received number of sensor poll messages
+uint8_t cnt_sensor; // count times a sensor value has been sent back
+```
 
 Counters can also be used to debug the hardware connections between the receiver and the Arduino board: If at least one sensor is defined, the RX pin will receive sensor poll messages. If the sensor is not able to "talk back" to the receiver the receiver will try to establish contact with the sensor every 7ms and the cnt_poll counter will increment. Only if the TX pin is correctly connected to the receiver, the cnt_sensor counter will increment and the cnt_poll value will stay the same.
 
@@ -171,12 +257,18 @@ The following sensor types are defined in IBusBM.h:
 
 ## Background processing and Interrupts
 
-IBusBM runs in the background using interrupts to ensure your code does not interfere with the iBUS timing. Timer0 is used by the core libraries on all Arduino boards to keep track of time for commands line millis() and delay(). IBusBM defines an additional interrupt on Timer 0 (the compare interrupt - TIMER0_COMPA_vect) to trigger the main process. Be sure not to change timer 0 or use the Timer0Compare interrupt in your sketch.
+IBusBM runs in the background using interrupts to ensure your code does not interfere with the iBUS timing. Timer0 is used by the core libraries on all Arduino AVR based boards to keep track of time for commands line millis() and delay(). IBusBM defines an additional interrupt on Timer 0 (the compare interrupt - TIMER0_COMPA_vect) to trigger the main process. If you want to change or disable timer 0 you can call the internal polling function loop() from your own code.  
+
+On ESP32 boards the library uses timer 0 by default. You can overrule the timer by adding a second argument to the begin() function. It is important to change the timer used when you also use the Esp32Servo library to control servos as this library also uses timers to generate the PWM wave form: the first servo uses timer 0, the second timer 1, etc. As the ESP32 has only 4 timers, you need to disable the use of the timer for IbusBM when you want to use more than 3 Servos. 
+
+In order to disable the timer background function you can add the IBUSBM_NOTIMER to the begin() function. You then need to call the loop() function from your own code at least once every 1 ms. If you define more than one IbusBM objects, you only need to call the loop() function for the first object.
 
 ## Example sketches provided
 
 Example sketches:
 
-- **Ibus2PWM**: converts iBUS data to Servo PWM format: Reads data from first servo channel and translates this to PWM signal to send to a normal servo
+- **Ibus2PWM**: converts iBUS data to Servo PWM format: Reads data from first servo channel and translates this to PWM signal to send to a normal servo (AVR version)
+- **Ibus2PWM_ESP32**: converts iBUS data to Servo PWM format: Reads data from first servo channel and translates this to PWM signal to send to a normal servo (ESP32 version)
 - **Ibus_singlemonitor**: monitor/debugger for receivers with a single iBUS pin (providing both servo and sensor data such as the Flysky X6B and Flysky FS-iA8X). Prints out servo channels to the standard serial output (PC debug window) and simulates 2 sensors with random values sent back to transmitter (as long as your receiver supports this). Requires Arduino board with 2 or more hardware serial ports (such as MEGA 2560)
 - **Ibus_multimonitor**: monitor/debugger for receivers with a two separate iBUS pins (one for servo data and one for sensor data, such as the TGY-IA6B). Prints out servo channels to the standard serial output (PC debug window) and simulates 2 sensors with random values sent back to transmitter. Requires Arduino board with 3 or more hardware serial ports (such as MEGA 2560)
+- **IBus_sensor**: simulate two telemetry sensors and send values back over the iBUS to the receiver to be shown in the display of your transmitter.

@@ -1,20 +1,14 @@
 #include <IBusBM.h>
 
 /*
-  Monitor iBUS signals and show output on the serial monitor for receivers with a single ibus pin
-  such as the Flysky FS-iA8X (from specs, not tested yet). The TGY-IA6C also has
-  one iBUS pin but only supports servo control signals and does not support external telemetry sensors.
+  Simulate two sensor and send information back over the iBUS to the receiver (and back to transmitter
+  as telemetry).
   
   Requires Arduino board with multiple UARTs (such as ATMEGA 2560, Micro or ESP32)
   - serial0 - monitor output (debug output to PC, this is through the build-in USB)
-  - serial1 - connected to the ibus receiver pin
-
-  Hardware connections to setup/test if you have a receiver with 1 ibus pins:
-  1. Only connect the serial1 (RX1) pin to the ibus pin of the receiver 
-     --> you should see the servo values on screen
-  2. Connect the serial1 (TX1) pin also to the RX1/ibus connection using an 1.2k Ohm reistor or 1N4148 diode
-     (cathode=white ring of the diode at the side of TX2) 
-     --> dummy sensor data should be sent back to the receiver (cnt_sensor also changes value)
+  - serial1 - connected RX of the serial port to the ibus receiver pin
+    Connect the (TX) pin also to the RX/ibus connection using an 1.2k Ohm reistor or 1N4148 diode
+    (cathode=white ring of the diode at the side of TX2) 
 
   sensor types defined in IBusBM.h:
   
@@ -38,7 +32,7 @@ void setup() {
   // you can change the pin number by replacing the line above with:
   // IBusServo.begin(Serial1, 1, 21, 22);
 
-  Serial.println("Start iBUS monitor");
+  Serial.println("Start iBUS sensor");
 
   // adding 2 sensors
   IBus.addSensor(IBUSS_RPM);
@@ -53,18 +47,6 @@ uint16_t speed=0;
 uint16_t temp=TEMPBASE+200; // start at 20'C
 
 void loop() {
-  // show first 8 servo channels
-  for (int i=0; i<8 ; i++) {
-    Serial.print(IBus.readChannel(i));
-    Serial.print(" ");
-  }
-  Serial.print("Cnt=");
-  Serial.print(IBus.cnt_rec); // count of how many times servo values have been updated
-  Serial.print(" POLL=");
-  Serial.print(IBus.cnt_poll); // count of polling for sensor existance
-  Serial.print(" Sensor=");
-  Serial.println(IBus.cnt_sensor); // count of polling for sensor value
-  
   IBus.setSensorMeasurement(1,speed);
   speed += 10;                           // increase motor speed by 10 RPM
   IBus.setSensorMeasurement(2,temp++); // increase temperature by 0.1 'C every loop

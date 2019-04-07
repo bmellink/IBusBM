@@ -17,11 +17,11 @@
  * version 2.1 of the License, or (at your option) any later version.
  *   
  * Created 12 March 2019 Bart Mellink
+ * Updated 4 April 2019 to support ESP32
  */
 
 #include <Arduino.h>
 #include "IBusBM.h"
-
 
 // pointer to the first class instance to be used to call the loop() method from timer interrupt
 // will be initiated by class constructor, then daisy channed to other class instances if we have more than one
@@ -30,10 +30,15 @@ IBusBM* IBusBMfirst = NULL;
 
 // Interrupt on timer0 - called every 1 ms
 // we call the IBusSensor.loop() here, so we are certain we respond to sensor requests in a timely matter
+#ifdef ARDUINO_ARCH_AVR
 SIGNAL(TIMER0_COMPA_vect) {
   if (IBusBMfirst) IBusBMfirst->loop();  // gets new servo values if available and process any sensor data
 }
-
+#else
+void  onTimer() {
+  if (IBusBMfirst) IBusBMfirst->loop();  // gets new servo values if available and process any sensor data
+}
+#endif
 
 /*
  *  supports max 14 channels in this lib (with messagelength of 0x20 there is room for 14 channels)
@@ -61,14 +66,14 @@ SIGNAL(TIMER0_COMPA_vect) {
  */
 
 
-void IBusBM::begin(HardwareSerial& serial) {
-  serial.begin(115200);
-  begin((Stream&)serial);
-}
+void IBusBM::begin(HardwareSerial& serial, int8_t timerid, int8_t rxPin, int8_t txPin) {
+  #ifdef ARDUINO_ARCH_AVR
+    serial.begin(115200, SERIAL_8N1);
+  #else
+    serial.begin(115200, SERIAL_8N1, rxPin, txPin);
+  #endif
 
-
-void IBusBM::begin(Stream& stream) {
-  this->stream = &stream;
+  this->stream = &serial;
   this->state = DISCARD;
   this->last = millis();
   this->ptr = 0;
@@ -78,11 +83,29 @@ void IBusBM::begin(Stream& stream) {
 
   // we need to process the iBUS sensor protocol handler frequently enough (at least once each ms) to ensure the response data
   // from the sensor is sent on time to the receiver
-  // Timer0 is already used for millis() - we'll just interrupt somewhere in the middle and call the TIMER0_COMPA_vect interrupt
+  // if timerid==IBUSBM_NOTIMER the user is responsible for calling the loop function
   this->IBusBMnext = IBusBMfirst;
+
+  if (!IBusBMfirst && timerid != IBUSBM_NOTIMER) {
+    #ifdef ARDUINO_ARCH_AVR
+      // on AVR architectures Timer0 is already used for millis() - we'll just interrupt somewhere in the middle and call the TIMER0_COMPA_vect interrupt
+      OCR0A = 0xAF;
+      TIMSK0 |= _BV(OCIE0A);
+    #else
+      // on other architectures we need to use a time
+      #ifdef ARDUINO_ARCH_ESP32
+        hw_timer_t * timer = NULL;
+        timer = timerBegin(timerid, F_CPU / 1000000L, true); // defaults to timer_id = 0; divider=80 (1 ms); countUp = true;
+        timerAttachInterrupt(timer, &onTimer, true); // edge = true
+        timerAlarmWrite(timer, 1000, true);  //1 ms
+        timerAlarmEnable(timer);
+      #else
+        // It should not be too difficult to support additional architectures as most have timer functions, but I only tested AVR and ESP32
+        #error "Only support for AVR and ESP32 architectures."
+      #endif
+    #endif
+  }
   IBusBMfirst = this; 
-  OCR0A = 0xAF;
-  TIMSK0 |= _BV(OCIE0A);
 }
 
 void IBusBM::loop(void) {

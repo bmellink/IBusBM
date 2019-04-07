@@ -6,10 +6,10 @@
   On the TGY-IA6B there are 2 ibus pins: one for the servos (only output) and one for the sensors/telemetry
   This example uses a serial port for each ibus line
   
-  Requires Arduino board with multiple UARTs (such as ATMEGA 2560)
+  Requires Arduino board with multiple UARTs (such as ATMEGA 2560 and ESP32)
   - serial0 - monitor output (debug output to PC)
-  - serial1 - connected to the servo ibus pin
-  - serial2 - connected to the sensor/telemetry ibus pin
+  - serial1 - connected to the servo ibus pin from the receiver
+  - serial2 - connected to the sensor/telemetry ibus pin from the receiver
 
   Hardware connections to setup/test:
   1. Only connect the serial1 (RX1) pin to the ibus servo pin --> you should see the servo values on screen
@@ -38,6 +38,10 @@ void setup() {
 
   // iBUS setup
   IBusServo.begin(Serial1);
+  // The default RX/TX pins for Serial1 on ESP32 boards are pins 9/10 and they are often not
+  // exposed on the printed circuit board. You can change the pin number by replacing the line above with:
+  // IBusServo.begin(Serial1, 1, 21, 22);
+
   IBusSensor.begin(Serial2);
 
   Serial.println("Start iBUS monitor");
