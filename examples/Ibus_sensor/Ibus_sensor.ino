@@ -50,6 +50,10 @@ void loop() {
   IBus.setSensorMeasurement(1,speed);
   speed += 10;                           // increase motor speed by 10 RPM
   IBus.setSensorMeasurement(2,temp++); // increase temperature by 0.1 'C every loop
+  Serial.print("Speed=");
+  Serial.print(speed);
+  Serial.print(" Temp=");
+  Serial.println((temp-TEMPBASE)/10.);
   delay(500);
 }
 

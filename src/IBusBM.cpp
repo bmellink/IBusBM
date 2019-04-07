@@ -67,10 +67,10 @@ void  onTimer() {
 
 
 void IBusBM::begin(HardwareSerial& serial, int8_t timerid, int8_t rxPin, int8_t txPin) {
-  #ifdef ARDUINO_ARCH_AVR
-    serial.begin(115200, SERIAL_8N1);
-  #else
+  #ifdef ARDUINO_ARCH_ESP32
     serial.begin(115200, SERIAL_8N1, rxPin, txPin);
+  #else
+    serial.begin(115200, SERIAL_8N1);
   #endif
 
   this->stream = &serial;
@@ -93,7 +93,7 @@ void IBusBM::begin(HardwareSerial& serial, int8_t timerid, int8_t rxPin, int8_t 
       TIMSK0 |= _BV(OCIE0A);
     #else
       // on other architectures we need to use a time
-      #ifdef ARDUINO_ARCH_ESP32
+      #if defined(ARDUINO_ARCH_ESP32) 
         hw_timer_t * timer = NULL;
         timer = timerBegin(timerid, F_CPU / 1000000L, true); // defaults to timer_id = 0; divider=80 (1 ms); countUp = true;
         timerAttachInterrupt(timer, &onTimer, true); // edge = true
