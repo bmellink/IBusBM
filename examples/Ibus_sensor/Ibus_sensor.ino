@@ -27,7 +27,7 @@ void setup() {
 
   // iBUS connected to serial1
   IBus.begin(Serial1);
-  // The default RX/TX pins for Serial1 on ESP32 boards are pins 9/10 and they are often not
+  // The default RX/TX pins for Serial1 on ESP32 boards are pins 9/10 and they are sometimes not
   // exposed on the printed circuit board. You can use Serial2 (for which the pins are often available) or
   // you can change the pin number by replacing the line above with:
   // IBusServo.begin(Serial1, 1, 21, 22);

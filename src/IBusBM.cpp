@@ -108,6 +108,7 @@ void IBusBM::begin(HardwareSerial& serial, int8_t timerid, int8_t rxPin, int8_t 
   IBusBMfirst = this; 
 }
 
+// called from timer interrupt or mannually by user (if IBUSBM_NOTIMER set in begin())
 void IBusBM::loop(void) {
 
   // if we have multiple instances of IBusBM, we (recursively) call the other instances loop() function
