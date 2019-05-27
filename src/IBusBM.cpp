@@ -104,7 +104,7 @@ void IBusBM::begin(HardwareSerial& serial, int8_t timerid, int8_t rxPin, int8_t 
         timerAlarmWrite(timer, 1000, true);  //1 ms
         timerAlarmEnable(timer);
       #elif defined(_VARIANT_ARDUINO_STM32_)
-	      TIM_TypeDef * TIMER = TIM4; // Select timer, TODO convert (int8_t timerid) into: (TIM_TypeDef * TIMER = TIMx)
+	      TIM_TypeDef * TIMER = TIM1; // Select timer, TODO convert (int8_t timerid) into: (TIM_TypeDef * TIMER = TIMx)
         static stimer_t TimHandle; // Handler for stimer
 	      TimHandle.timer = TIMER; // Set TIMx instance.
 	      TimerHandleInit(&TimHandle, 1000 - 1, ((uint32_t)(getTimerClkFreq(TIMER) / (1000000)) - 1)); // Set TIMx timer to 1ms 
