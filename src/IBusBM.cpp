@@ -34,6 +34,10 @@ IBusBM* IBusBMfirst = NULL;
 SIGNAL(TIMER0_COMPA_vect) {
   if (IBusBMfirst) IBusBMfirst->loop();  // gets new servo values if available and process any sensor data
 }
+#elif defined _VARIANT_ARDUINO_STM32_
+void  onTimer(stimer_t *htim) {
+  if (IBusBMfirst) IBusBMfirst->loop();  // gets new servo values if available and process any sensor data
+}
 #else
 void  onTimer() {
   if (IBusBMfirst) IBusBMfirst->loop();  // gets new servo values if available and process any sensor data
@@ -99,9 +103,15 @@ void IBusBM::begin(HardwareSerial& serial, int8_t timerid, int8_t rxPin, int8_t 
         timerAttachInterrupt(timer, &onTimer, true); // edge = true
         timerAlarmWrite(timer, 1000, true);  //1 ms
         timerAlarmEnable(timer);
+      #elif defined(_VARIANT_ARDUINO_STM32_)
+	      TIM_TypeDef * TIMER = TIM1; // Select timer, TODO convert (int8_t timerid) into: (TIM_TypeDef * TIMER = TIMx)
+        static stimer_t TimHandle; // Handler for stimer
+	      TimHandle.timer = TIMER; // Set TIMx instance.
+	      TimerHandleInit(&TimHandle, 1000 - 1, ((uint32_t)(getTimerClkFreq(TIMER) / (1000000)) - 1)); // Set TIMx timer to 1ms 
+	      attachIntHandle(&TimHandle, onTimer); // Attach onTimer interupt routine 
       #else
         // It should not be too difficult to support additional architectures as most have timer functions, but I only tested AVR and ESP32
-        #error "Only support for AVR and ESP32 architectures."
+        #error "Only support for AVR, ESP32 and STM32 architectures."
       #endif
     #endif
   }
