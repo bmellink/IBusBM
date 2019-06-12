@@ -7,7 +7,7 @@
 
   Connect Ibus reciever to STM32 Serial1 (PA10 for STM32F103C8T6/blue pill)
   Connect motor shaft feedback potentiometer to GND, 3,3V and the wiper to A0
-  For use with H-bridge with BTS7960 based IBT-2 modules
+  For use with H-bridge based on BTS7960, like IBT-2 modules:
     Connect GND to GND
     Connect L-EN and R-EN to LED_BUILTIN pin (PC13 for STM32F103C8T6/blue pill)
     Connect LPWM to LPWM_pin and LPWM to RPWM_pin(PB6 and PB7 for STM32F103C8T6/blue pill)
@@ -41,7 +41,7 @@ char IbusInterval =  8 ;                                                        
 unsigned long CurrentMillis = 0;                                                    // CurrentMillis variable
 
 double Setpoint, Input, Output;                                                     // PID variables
-PID SERVO(&Input, &Output, &Setpoint, P, I , D, DIRECT);                           // Initialize servo pid
+PID SERVO(&Input, &Output, &Setpoint, P, I , D, DIRECT);                            // Initialize servo pid
 
 IBusBM IBUS;                                                                        // initialize IbusMonitor
 
@@ -60,16 +60,16 @@ void setup() {                                                                  
   SERVO.SetOutputLimits(-511, 511);                                                 // Limit to +/- half of analogRead resolution (0-1023)
   SERVO.SetSampleTime(IbusInterval);                                                // Sample at IbusInterval (8ms, 125Hz)
 
-  Serial.begin(115200);                                                            // Start Serial usb connection
+  Serial.begin(115200);                                                             // Start Serial usb connection
 
-  IBUS.begin(Serial1, IBUSBM_NOTIMER);                                             // Start Ibus connection on serial1 without timer, call IBUS.loop() in Millisecond loop.
+  IBUS.begin(Serial1, IBUSBM_NOTIMER);                                              // Start Ibus connection on serial1 without timer, call IBUS.loop() in Millisecond loop.
 
   while (IBUS.cnt_rec == 0) {                                                       // Wait until first Ibus messages is recieved
     IBUS.loop();                                                                    // Call the Ibus loop to check for Ibus messages from the receiver
-    if (Serial.available() ) {                                                     // Only show debug message if usb is connected
+    if (Serial.available() ) {                                                      // Only show debug message if usb is connected
       Serial.println("Starting iBUS Servo, Waiting for Reciever");
-      delay(1);                                                                     // Wait 1 Milllisecond before checking for Ibus messages again
     }
+    delay(1);                                                                       // Wait 1 Milllisecond before checking for Ibus messages again
   }
 
 }
@@ -88,34 +88,34 @@ void loop() {                                                                   
       int STEER = (IBUS.readChannel(STEER_chan - 1));                               // Read ibus steer input from STEER_chan
       int ANGLE = analogRead(ANGLE_pin);                                            // Read Angle from potentiometer
 
-      Setpoint = map(STEER, 1000, 2000, -511, 511);                                 // Convert ARMED_chan to match  PID limits
-      Input = map(ANGLE, 0, 1023, -511, 511);                                       // Convert ANGLE to match feedback PID limits
+      Setpoint = map(STEER, 1000, 2000, -511, 511);                                 // Convert STEER Value to match PID limits
+      Input = map(ANGLE, 0, 1023, -511, 511);                                       // Convert ANGLE Value to match feedback PID limits
       SERVO.Compute();                                                              // Calculate PID output
 
       if (IBUS.cnt_rec == IbusCount) {                                              // Check if IBUS.cnt_rec has updated, disable when no New Ibus messages.
         digitalWrite(ARMED_pin, LOW);
         analogWrite(LPWM_pin, 0);
         analogWrite(RPWM_pin, 0);
-        if (Serial.available() ) {                                                 // Only show debug message if usb is connected
+        if (Serial.available() ) {                                                  // Only show debug message if usb is connected
           Serial.println("Waiting for Reciever");
         }
       }
 
       else {                                                                        // New Ibus message recieved
 
-        if (Serial.available() ) {                                                 // Only show debug message if usb is connected
+        if (Serial.available() ) {                                                  // Only show debug message if usb is connected
           for (int i = 0; i < 10 ; i++) {                                           // Show first 10 ibus channels
             Serial.print(IBUS.readChannel(i));
             Serial.print(" ");
           }
           Serial.print("Cnt=");
-          Serial.print(IBUS.cnt_rec);                                              // Show Ibus message counter
+          Serial.print(IBUS.cnt_rec);                                               // Show Ibus message counter
           Serial.print (" Armed ");
-          Serial.print (ARMED);                                                    // Show ARMED State
+          Serial.print (ARMED);                                                     // Show ARMED State
           Serial.print (" , Angle ");
-          Serial.print (ANGLE);                                                    // Show ANGLE from Potentiometer
+          Serial.print (ANGLE);                                                     // Show ANGLE from Potentiometer
           Serial.print (" , PWM ");
-          Serial.println( int(constrain(Output / 2, -MAX_pwm, MAX_pwm))*ARMED );   // Convert and Show PWM Value
+          Serial.println( int(constrain(Output / 2, -MAX_pwm, MAX_pwm))*ARMED );    // Convert and Show PWM Value
         }
 
         digitalWrite(ARMED_pin, ARMED);                                             // Write enable pin according to ARMED state
