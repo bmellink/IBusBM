@@ -273,3 +273,4 @@ Example sketches:
 - **Ibus_multimonitor**: monitor/debugger for receivers with a two separate iBUS pins (one for servo data and one for sensor data, such as the TGY-IA6B). Prints out servo channels to the standard serial output (PC debug window) and simulates 2 sensors with random values sent back to transmitter. Requires Arduino board with 3 or more hardware serial ports (such as MEGA 2560)
 - **IBus_sensor**: simulate two telemetry sensors and send values back over the iBUS to the receiver to be shown in the display of your transmitter
 - **Ibus_diy_servo_STM32**: example for (large) diy DC servo's, like windshield wiper motors. Change the  P I D settings for servo response and tuning
+- **Robotcar**: Example remote controlled car using the VNH3SP30 motor driver
