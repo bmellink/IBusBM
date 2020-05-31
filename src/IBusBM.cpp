@@ -111,7 +111,7 @@ void IBusBM::begin(HardwareSerial& serial, int8_t timerid, int8_t rxPin, int8_t 
 	      attachIntHandle(&TimHandle, onTimer); // Attach onTimer interupt routine 
       #else
         // It should not be too difficult to support additional architectures as most have timer functions, but I only tested AVR and ESP32
-        #error "Only support for AVR, ESP32 and STM32 architectures."
+        #warning "Timing only supportted for AVR, ESP32 and STM32 architectures. Use timerid IBUSBM_NOTIMER"
       #endif
     #endif
   }
