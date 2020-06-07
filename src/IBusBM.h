@@ -33,9 +33,9 @@ public:
 
   void loop(void); // used internally for interrupt handline, but needs to be defined as public
   
-  uint8_t cnt_poll; // count received number of sensor poll messages
-  uint8_t cnt_sensor; // count times a sensor value has been sent back
-  uint8_t cnt_rec; // count received number of servo messages
+  volatile uint8_t cnt_poll; // count received number of sensor poll messages
+  volatile uint8_t cnt_sensor; // count times a sensor value has been sent back
+  volatile uint8_t cnt_rec; // count received number of servo messages
   
 private:
   enum State {GET_LENGTH, GET_DATA, GET_CHKSUML, GET_CHKSUMH, DISCARD};
