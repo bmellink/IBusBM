@@ -36,7 +36,7 @@ IBusBM.h defines sensor types
 #define IBUSS_RPM  2 // RPM
 #define IBUSS_EXTV 3 // External voltage (in 0.01)
 ````
-Ig you have an OpenTx transceiver you can use additional telemetry sensors as defined in https://github.com/cleanflight/cleanflight/blob/7cd417959b3cb605aa574fc8c0f16759943527ef/src/main/telemetry/ibus_shared.h. Most sensors use 2 bytes of data. However, some sensors need 4 bytes of data. You can add the number of data bytes as second argument of the addSensor method as follows
+If you have an OpenTx transceiver you can use additional telemetry sensors as defined in https://github.com/cleanflight/cleanflight/blob/7cd417959b3cb605aa574fc8c0f16759943527ef/src/main/telemetry/ibus_shared.h. Most sensors use 2 bytes of data. However, some sensors need 4 bytes of data. You can add the number of data bytes as second argument of the addSensor method as follows
 
 ````
 #define IBUS_SENSOR_TYPE_GPS_LAT  0x80
