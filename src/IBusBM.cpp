@@ -171,11 +171,13 @@ void IBusBM::loop(void) {
             }
             cnt_rec++;
           } else if (adr<=NumberSensors && adr>0 && len==1) {
+
             // all sensor data commands go here
             // we only process the len==1 commands (=message length is 4 bytes incl overhead) to prevent the case the
             // return messages from the UART TX port loop back to the RX port and are processed again. This is extra
             // precaution as it will also be prevented by the PROTOCOL_TIMEGAP required
-            delayMicroseconds(100);
+           sensorinfo *s = &sensors[adr];
+           delayMicroseconds(100);
             switch (buffer[0] & 0x0f0) {
               case PROTOCOL_COMMAND_DISCOVER: // 0x80, discover sensor
                 cnt_poll++;  
@@ -188,18 +190,28 @@ void IBusBM::loop(void) {
                 // echo sensortype command: 0x06 0x91 0x00 0x02 0x66 0xFF 
                 stream->write(0x06);
                 stream->write(PROTOCOL_COMMAND_TYPE + adr);
-                stream->write(sensorType[adr]);
-                stream->write(0x02); // always this value - unkwown
-                chksum = 0xFFFF - (0x06 + PROTOCOL_COMMAND_TYPE + adr + sensorType[adr] + 2);
+                stream->write(s->sensorType);
+                stream->write(s->sensorLength);
+                chksum = 0xFFFF - (0x06 + PROTOCOL_COMMAND_TYPE + adr + s->sensorType + s->sensorLength);
                 break;
               case PROTOCOL_COMMAND_VALUE: // 0xA0, send sensor data
                 cnt_sensor++;
+                uint8_t t;
                 // echo sensor value command: 0x06 0x91 0x00 0x02 0x66 0xFF 
-                stream->write(0x06);
-                stream->write(PROTOCOL_COMMAND_VALUE + adr);
-                stream->write(sensorValue[adr] & 0x0ff);
-                stream->write(sensorValue[adr] >> 8); 
-                chksum = 0xFFFF - (0x06 + PROTOCOL_COMMAND_VALUE + adr + (sensorValue[adr]>>8) + (sensorValue[adr]&0x0ff));
+                stream->write(t = 0x04 + s->sensorLength);
+                chksum = 0xFFFF - t;
+                stream->write(t = PROTOCOL_COMMAND_VALUE + adr);
+                chksum -= t;
+                stream->write(t = s->sensorValue & 0x0ff);
+                chksum -= t;
+                stream->write(t = (s->sensorValue >> 8) & 0x0ff); 
+                chksum -= t;
+                if (s->sensorLength==4) {
+                  stream->write(t = (s->sensorValue >> 16) & 0x0ff); 
+                  chksum -= t;
+                  stream->write(t = (s->sensorValue >> 24) & 0x0ff); 
+                  chksum -= t;                  
+                }
                 break;
               default:
                 adr=0; // unknown command, prevent sending chksum
@@ -229,18 +241,21 @@ uint16_t IBusBM::readChannel(uint8_t channelNr) {
   }
 }
 
-uint8_t IBusBM::addSensor(uint8_t type) {
+uint8_t IBusBM::addSensor(uint8_t type, uint8_t len) {
   // add a sensor, return sensor number
+  if (len!=2 || len!=4) len = 2;
   if (NumberSensors < SENSORMAX) {
     NumberSensors++;
-    sensorType[NumberSensors] = type;
+    sensorinfo *s = &sensors[NumberSensors];
+    s->sensorType = type;
+    s->sensorLength = len;
+    s->sensorValue = 0;
   }
   return NumberSensors;
 }
 
-void IBusBM::setSensorMeasurement(uint8_t adr, uint16_t value){
+void IBusBM::setSensorMeasurement(uint8_t adr, int32_t value) {
    if (adr<=NumberSensors)
-     sensorValue[adr] = value;
+     sensors[adr].sensorValue = value;
 }
-
 

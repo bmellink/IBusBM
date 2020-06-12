@@ -28,6 +28,21 @@ You have three options:
 
 For more information on the iBUS protocol, see (https://github.com/betaflight/betaflight/wiki/Single-wire-FlySky-(IBus)-telemetry). (please skip over the first part of the article how to combine the servo output and sensor data pins of the TGY receiver as it is more reliable to use two different UART ports on your Arduino if you need both servo and sensor data in your sketch).
 
+### Additional telemetry sensors
+IBusBM.h defines sensor types 
+````
+#define IBUSS_INTV 0 // Internal voltage (in 0.01)
+#define IBUSS_TEMP 1 // Temperature (in 0.1 degrees, where 0=-40'C)
+#define IBUSS_RPM  2 // RPM
+#define IBUSS_EXTV 3 // External voltage (in 0.01)
+````
+Ig you have an OpenTx transceiver you can use additional telemetry sensors as defined in https://github.com/cleanflight/cleanflight/blob/7cd417959b3cb605aa574fc8c0f16759943527ef/src/main/telemetry/ibus_shared.h. Most sensors use 2 bytes of data. However, some sensors need 4 bytes of data. You can add the number of data bytes as second argument of the addSensor method as follows
+
+````
+#define IBUS_SENSOR_TYPE_GPS_LAT  0x80
+IBus.addSensor(IBUS_SENSOR_TYPE_GPS_LAT, 4); 
+````
+
 ### Example wiring
 
 ![Wiring with MEGA 2560](wiring.png?raw=true "Wiring with MEGA 2560")
