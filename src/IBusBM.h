@@ -15,10 +15,10 @@
 
 // if you have an opentx transciever you can add additional sensor types here.
 // see https://github.com/cleanflight/cleanflight/blob/7cd417959b3cb605aa574fc8c0f16759943527ef/src/main/telemetry/ibus_shared.h
-#define IBUSS_INTV 0 // Internal voltage (in 0.01)
-#define IBUSS_TEMP 1 // Temperature (in 0.1 degrees, where 0=-40'C)
-#define IBUSS_RPM  2 // RPM
-#define IBUSS_EXTV 3 // External voltage (in 0.01)
+#define IBUSS_INTV 0x00 // Internal voltage (in 0.01)
+#define IBUSS_TEMP 0x01 // Temperature (in 0.1 degrees, where 0=-40'C)
+#define IBUSS_RPM  0x02 // RPM
+#define IBUSS_EXTV 0x03 // External voltage (in 0.01)
 
 #define IBUSBM_NOTIMER -1 // no timer interrupt used
 

@@ -243,7 +243,7 @@ uint16_t IBusBM::readChannel(uint8_t channelNr) {
 
 uint8_t IBusBM::addSensor(uint8_t type, uint8_t len) {
   // add a sensor, return sensor number
-  if (len!=2 || len!=4) len = 2;
+  if (len!=2 && len!=4) len = 2;
   if (NumberSensors < SENSORMAX) {
     NumberSensors++;
     sensorinfo *s = &sensors[NumberSensors];
