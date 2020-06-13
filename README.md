@@ -226,9 +226,9 @@ The IBusBM class exposes the following functions:
 This initializes the library for a given serial port. rxPin and txPin can be specified for the serial ports 1 and 2 of ESP32 architectures (default to RX1=9, TX1=10, RX2=16, TX2=17). Serial port 0 and ports on AVR boards can not be overruled (pins on ESP32 are RX0=3, TX0=1). The variable timerid specifies the timer used (ESP32 only) to drive the background processing (see below). A value of IBUSBM_NOTIMER disables the timer interrupt and you should call loop() yourself.
 
 ```
-uint8_t addSensor(uint8_t type); 
+uint8_t addSensor(uint8_t type, uint8_t len=2); 
 ```
-Defines new sensor of type "type", returns sensor number (first is number 1)
+Defines new sensor of type "type", returns sensor number (first is number 1). The optional parameter "len" is the number of bytes used for storing the sensor value (can be 2 or 4).
 
 ```
 uint16_t readChannel(uint8_t channelNr);
@@ -236,7 +236,7 @@ uint16_t readChannel(uint8_t channelNr);
 Read the value of servo channel 0..9 corresponding with servo channels 1..10.
 
 ```
-void setSensorMeasurement(uint8_t adr, uint16_t value);
+void setSensorMeasurement(uint8_t adr, int32_t value);
 ```
 Set value of sensor number adr to a given value (first sensor is number 1). The background process will send the value back through the receiver.
 
