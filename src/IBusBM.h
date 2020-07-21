@@ -13,6 +13,11 @@
 
 #include <inttypes.h>
 
+#if defined(ARDUINO_ARCH_MBED)
+#include "mbed.h"
+#include "HardwareSerial.h"
+#endif
+
 // if you have an opentx transciever you can add additional sensor types here.
 // see https://github.com/cleanflight/cleanflight/blob/7cd417959b3cb605aa574fc8c0f16759943527ef/src/main/telemetry/ibus_shared.h
 #define IBUSS_INTV 0x00 // Internal voltage (in 0.01)
@@ -22,7 +27,11 @@
 
 #define IBUSBM_NOTIMER -1 // no timer interrupt used
 
+#if defined(ARDUINO_ARCH_MBED)
+#define HardwareSerial arduino::HardwareSerial
+#else
 class HardwareSerial;
+#endif
 class Stream;
 
 class IBusBM {
