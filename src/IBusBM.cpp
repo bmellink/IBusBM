@@ -44,6 +44,24 @@ void  onTimer() {
 }
 #endif
 
+
+#if defined(ARDUINO_ARCH_MBED)
+
+extern "C"
+{
+void TIMER4_IRQHandler_v()
+{
+  if (NRF_TIMER4->EVENTS_COMPARE[0] == 1)
+  {   
+      onTimer();
+      NRF_TIMER4->EVENTS_COMPARE[0] = 0;
+  }
+}
+}
+
+#endif
+
+
 /*
  *  supports max 14 channels in this lib (with messagelength of 0x20 there is room for 14 channels)
 
@@ -109,6 +127,25 @@ void IBusBM::begin(HardwareSerial& serial, int8_t timerid, int8_t rxPin, int8_t 
 	      TimHandle.timer = TIMER; // Set TIMx instance.
 	      TimerHandleInit(&TimHandle, 1000 - 1, ((uint32_t)(getTimerClkFreq(TIMER) / (1000000)) - 1)); // Set TIMx timer to 1ms 
 	      attachIntHandle(&TimHandle, onTimer); // Attach onTimer interupt routine 
+      #elif defined(ARDUINO_ARCH_MBED)
+        NRF_TIMER4->TASKS_STOP = 1; // Stop timer
+        NRF_TIMER4->MODE = TIMER_MODE_MODE_Timer;  // Set the timer in Counter Mode
+        NRF_TIMER4->BITMODE = TIMER_BITMODE_BITMODE_16Bit << TIMER_BITMODE_BITMODE_Pos;
+        NRF_TIMER2->TASKS_CLEAR = 1;               // clear the task first to be usable for later
+
+        // Set prescaler & compare register.
+        // Prescaler = 0 gives 16MHz timer. 
+        // Prescaler = 4 (2^4) gives 1MHz timer. 
+        NRF_TIMER4->PRESCALER = 4 << TIMER_PRESCALER_PRESCALER_Pos;  
+        NRF_TIMER4->CC[0] = 1000; 
+  
+        // Enable interrupt on Timer 4 for CC[0] compare match events
+        NRF_TIMER4->INTENSET = TIMER_INTENSET_COMPARE0_Enabled << TIMER_INTENSET_COMPARE0_Pos;
+        NRF_TIMER4->SHORTS = TIMER_SHORTS_COMPARE0_CLEAR_Enabled << TIMER_SHORTS_COMPARE0_CLEAR_Pos;
+ 
+        NVIC_EnableIRQ(TIMER4_IRQn);
+
+        NRF_TIMER4->TASKS_START = 1;      // Start TIMER2
       #else
         // It should not be too difficult to support additional architectures as most have timer functions, but I only tested AVR and ESP32
         #warning "Timing only supportted for AVR, ESP32 and STM32 architectures. Use timerid IBUSBM_NOTIMER"
