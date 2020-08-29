@@ -3,7 +3,7 @@
 
 
 /*
-  Translate iBUS signal to servo
+  Translate iBUS signal to servo for MBED architecture (such as Arduino Nano 33 BLE)
   
   Supports any Arduino board where serial0 is available. 
  

@@ -15,7 +15,7 @@ Receivers with one iBUS pin typically send servo commands over the iBUS line, bu
 
 To install this library use the **Clone or download > Download ZIP** button on the repository home page and then install the library in your Arduino environment using **Sketch > Include Library > Add .ZIP Library...**
 
-This library supports AVR based Arduino boards (Arduino MEGA, UNO, Nano, Micro, etc.), ESP32 based boards (ESP32, NodeMCU, etc.) and STM32 boards (STM32F103, etc.)
+This library supports AVR based Arduino boards (Arduino MEGA, UNO, Nano, Micro, etc.), ESP32 based boards (ESP32, NodeMCU, etc.), STM32 boards (STM32F103, etc.) and MBED (such as the Arduino NANO 33 BLE).
 
 ### Prerequisites
 
@@ -306,4 +306,5 @@ Example sketches:
 - **Ibus_multimonitor**: monitor/debugger for receivers with a two separate iBUS pins (one for servo data and one for sensor data, such as the TGY-IA6B). Prints out servo channels to the standard serial output (PC debug window) and simulates 2 sensors with random values sent back to transmitter. Requires Arduino board with 3 or more hardware serial ports (such as MEGA 2560)
 - **IBus_sensor**: simulate two telemetry sensors and send values back over the iBUS to the receiver to be shown in the display of your transmitter
 - **Ibus_diy_servo_STM32**: example for (large) diy DC servo's, like windshield wiper motors. Change the  P I D settings for servo response and tuning
+- **Ibus2PWM_mbed**: example translate iBUS signal to servo for MBED (Arduino Nano 33 BLE)
 - **Robotcar**: Example remote controlled car using the VNH3SP30 motor driver

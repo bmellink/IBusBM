@@ -18,7 +18,8 @@
  *   
  * Created 12 March 2019 Bart Mellink
  * Updated 4 April 2019 to support ESP32
- * Updated 21 Jul 2020 to support MBED (David Peverley)
+ * updated 13 jun 2019 to support STM32 (pauluzs)
+ * Updated 21 Jul 2020 to support MBED (David Peverley) 
  */
 
 #include <Arduino.h>
@@ -47,19 +48,14 @@ void  onTimer() {
 
 
 #if defined(ARDUINO_ARCH_MBED)
-
-extern "C"
-{
-void TIMER4_IRQHandler_v()
-{
-  if (NRF_TIMER4->EVENTS_COMPARE[0] == 1)
-  {   
-      onTimer();
-      NRF_TIMER4->EVENTS_COMPARE[0] = 0;
+extern "C" {
+  void TIMER4_IRQHandler_v() {
+    if (NRF_TIMER4->EVENTS_COMPARE[0] == 1) {   
+        onTimer();
+        NRF_TIMER4->EVENTS_COMPARE[0] = 0;
+    }
   }
 }
-}
-
 #endif
 
 

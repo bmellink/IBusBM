@@ -65,7 +65,7 @@ private:
   static const uint8_t SENSORMAX = 10; // Max number of sensors
   
   uint8_t state;                    // state machine state for iBUS protocol
-  Stream * stream;           // serial port
+  HardwareSerial *stream;           // serial port
   uint32_t last;                    // milis() of prior message
   uint8_t buffer[PROTOCOL_LENGTH];  // message buffer
   uint8_t ptr;                      // pointer in buffer
