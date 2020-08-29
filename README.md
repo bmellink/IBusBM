@@ -3,13 +3,13 @@ Arduino library for Flysky/Turnigy RC iBUS protocol - servo (receive) and sensor
 
 The iBUS protocol is a half-duplex protocol developed by Flysky to control multiple servos and motors using a single digital line. The values received for each servo channel are between 1000 (hex eE8) and 2000 (hex 7D0) with neutral sub trim setting, which corresponds with the pulse width in microseconds for most servos.
 
-The protocol can also connect sensors to send back telemetry information to a RC transceiver. Currently the protocol only supports 3 sensor types: Voltage, Temperature and Motor speed (RPM). You can define up to 10 sensors using this library.
+The protocol can also connect sensors to send back telemetry information to a RC transceiver. Depending on your transmitter you can use multiple sensors. You can define up to 10 sensors using this library. The Turnigy FS-MT6 only supports voltage, temperature, motor speed and pressure, but OpenTX based receivers support a long list of sensors, which can all be used by passing the right sensor ID to the addSensor() function.
 
 This library was written and tested for the TGY-IA6B receiver and should work for other receivers too (such as the FS-iA10 and TGY-iA10).
 The TGY-IA6B has 2 iBUS pins: one for the servos (only output) and one for the sensors/telemetry
 (which uses a half-duplex protocol to switch between output and input to poll for sensor data).
 
-Receivers with one iBUS pin typically send servo commands over the iBUS line, but do not always poll external sensors. The TGY-iA6C for instance only sends servo data over the iBUS and is only able to send back internal telemetry data (such as Rssi and voltage) and the voltage measurement of the B-DET connection. The specs of the Flysky X6B and Flysky FS-iA8X are unclear if telemetry sensors is supported over iBUS.
+Receivers with one iBUS pin typically send servo commands over the iBUS line, but do not always poll external sensors. The TGY-iA6C for instance only sends servo data over the iBUS and is only able to send back internal telemetry data (such as Rssi and voltage) and the voltage measurement of the B-DET connection. The specs of the Flysky X6B and Flysky FS-iA8X are unclear if telemetry sensors is supported over iBUS and they are not (yet) tested with this library.
 
 ## Getting Started
 
@@ -243,7 +243,23 @@ Set value of sensor number adr to a given value (first sensor is number 1). The 
 ```
 void loop();
 ```
-Call the internal polling function (at least once per 1 ms) in case you disable the timer interrup. See below. If you have multiple instances of the IbusBM class, you only need to call this function for the first instance.
+Call the internal polling function (at least once per 1 ms) in case you disable the timer interrup. See below. If you have multiple instances of the IbusBM class, you only need to call this function for the last instance for which you call the begin() function. Example:
+
+```
+void setup() {
+  .... other setup code goes here ....
+  // code included in setup() for initiating the instances
+  IBusServo.begin(Serial1, IBUSBM_NOTIMER);   // first instance
+  IBusSensor.begin(Serial2, IBUSBM_NOTIMER);  // second instance
+}
+
+void loop() {
+  .... other loop() code goes here ....
+  // code to call the polling function. Should be called at least once every 1 ms
+  IbusSensor.loop();  // IbusSensor.loop() will call IbusServo.loop(), no separate call is needed here.
+  wait(1);
+}
+```
 
 The IBusBM class exposes the following counters. Counters are 1 byte (value 0..255) and values can be used by your code to understand if new data is available. 
 
@@ -268,7 +284,9 @@ The following sensor types are defined in IBusBM.h:
 #define iBUSS_TEMP 1 // Temperature (in 0.1 degrees Celcius, where 0=-40'C and 400=0 'C')
 #define iBUSS_RPM  2 // RPM
 #define iBUSS_EXTV 3 // External voltage (in 0.01, so 510=5.1V)
+#define IBUS_PRESS 0x41 // Pressure (in Pa)
 ```
+Depending on your transmitter you can use other sensor types too. If you have an OpenTX compatible transmitter, see the OpenTX documentation for the required sensor ID to pass to the addSensor() function.
 
 ## Background processing and Interrupts
 

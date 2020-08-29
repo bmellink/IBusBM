@@ -18,6 +18,7 @@
  *   
  * Created 12 March 2019 Bart Mellink
  * Updated 4 April 2019 to support ESP32
+ * Updated 21 Jul 2020 to support MBED (David Peverley)
  */
 
 #include <Arduino.h>
@@ -69,8 +70,7 @@ void  onTimer() {
     Checksum: DA F3 -> calculated by adding up all previous bytes, total must be FFFF
  */
 
-
-void IBusBM::begin(HardwareSerial& serial, int8_t timerid, int8_t rxPin, int8_t txPin) {
+void IBusBM::begin(HardwareSerial &serial, int8_t timerid, int8_t rxPin, int8_t txPin) {
   #ifdef ARDUINO_ARCH_ESP32
     serial.begin(115200, SERIAL_8N1, rxPin, txPin);
   #else
@@ -176,7 +176,7 @@ void IBusBM::loop(void) {
             // we only process the len==1 commands (=message length is 4 bytes incl overhead) to prevent the case the
             // return messages from the UART TX port loop back to the RX port and are processed again. This is extra
             // precaution as it will also be prevented by the PROTOCOL_TIMEGAP required
-           sensorinfo *s = &sensors[adr];
+           sensorinfo *s = &sensors[adr-1];
            delayMicroseconds(100);
             switch (buffer[0] & 0x0f0) {
               case PROTOCOL_COMMAND_DISCOVER: // 0x80, discover sensor
@@ -245,17 +245,17 @@ uint8_t IBusBM::addSensor(uint8_t type, uint8_t len) {
   // add a sensor, return sensor number
   if (len!=2 && len!=4) len = 2;
   if (NumberSensors < SENSORMAX) {
-    NumberSensors++;
     sensorinfo *s = &sensors[NumberSensors];
     s->sensorType = type;
     s->sensorLength = len;
     s->sensorValue = 0;
+    NumberSensors++;
   }
   return NumberSensors;
 }
 
 void IBusBM::setSensorMeasurement(uint8_t adr, int32_t value) {
-   if (adr<=NumberSensors)
-     sensors[adr].sensorValue = value;
+   if (adr<=NumberSensors && adr>0)
+     sensors[adr-1].sensorValue = value;
 }
 

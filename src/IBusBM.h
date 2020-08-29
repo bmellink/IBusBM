@@ -15,10 +15,13 @@
 
 // if you have an opentx transciever you can add additional sensor types here.
 // see https://github.com/cleanflight/cleanflight/blob/7cd417959b3cb605aa574fc8c0f16759943527ef/src/main/telemetry/ibus_shared.h
+// below the values supported by the Turnigy FS-MT6 transceiver
 #define IBUSS_INTV 0x00 // Internal voltage (in 0.01)
 #define IBUSS_TEMP 0x01 // Temperature (in 0.1 degrees, where 0=-40'C)
 #define IBUSS_RPM  0x02 // RPM
 #define IBUSS_EXTV 0x03 // External voltage (in 0.01)
+#define IBUS_PRESS 0x41 // Pressure (in Pa)
+#define IBUS_SERVO 0xfd // Servo value
 
 #define IBUSBM_NOTIMER -1 // no timer interrupt used
 
@@ -28,7 +31,7 @@ class Stream;
 class IBusBM {
 
 public:
-  void begin(HardwareSerial& serial, int8_t timerid=0, int8_t rxPin=-1, int8_t txPin=-1);
+  void begin(HardwareSerial &serial, int8_t timerid=0, int8_t rxPin=-1, int8_t txPin=-1);
   uint16_t readChannel(uint8_t channelNr); // read servo channel 0..9
   uint8_t addSensor(uint8_t type, uint8_t len=2); // add sensor type and data length (2 or 4), returns address
   void setSensorMeasurement(uint8_t adr, int32_t value);
@@ -53,7 +56,7 @@ private:
   static const uint8_t SENSORMAX = 10; // Max number of sensors
   
   uint8_t state;                    // state machine state for iBUS protocol
-  HardwareSerial* stream;           // serial port
+  Stream * stream;           // serial port
   uint32_t last;                    // milis() of prior message
   uint8_t buffer[PROTOCOL_LENGTH];  // message buffer
   uint8_t ptr;                      // pointer in buffer
@@ -64,10 +67,10 @@ private:
   typedef struct {
     uint8_t sensorType;             // sensor type (0,1,2,3, etc)
     uint8_t sensorLength;           // data length for defined sensor (can be 2 or 4)
-    int32_t sensorValue;           // sensor data for defined sensors (16 or 32 bits)
+    int32_t sensorValue;            // sensor data for defined sensors (16 or 32 bits)
   } sensorinfo;
   sensorinfo sensors[SENSORMAX];
-  uint8_t NumberSensors;            // number of sensors
+  uint8_t NumberSensors = 0;        // number of sensors
   IBusBM* IBusBMnext = NULL;        // pointer to the next class instance to be used to call the loop() method from timer interrupt
 };
 
