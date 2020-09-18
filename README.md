@@ -221,9 +221,12 @@ void loop() {
 The IBusBM class exposes the following functions:
 
 ```
-- void begin(HardwareSerial& serial, int8_t timerid=0, int8_t rxPin=-1, int8_t txPin=-1);
+- void begin(HardwareSerial &serial, int8_t timerid=0, int8_t rxPin=-1, int8_t txPin=-1);  // other architectures
+- void begin(HardwareSerial &serial, TIM_TypeDef * timerid=TIM1, int8_t rxPin=-1, int8_t txPin=-1); // STM32 architecture
+
 ```
-This initializes the library for a given serial port. rxPin and txPin can be specified for the serial ports 1 and 2 of ESP32 architectures (default to RX1=9, TX1=10, RX2=16, TX2=17). Serial port 0 and ports on AVR boards can not be overruled (pins on ESP32 are RX0=3, TX0=1). The variable timerid specifies the timer used (ESP32 only) to drive the background processing (see below). A value of IBUSBM_NOTIMER disables the timer interrupt and you should call loop() yourself.
+This initializes the library for a given serial port. rxPin and txPin can be specified for the serial ports 1 and 2 of ESP32 architectures (default to RX1=9, TX1=10, RX2=16, TX2=17). Serial port 0 and ports on AVR boards can not be overruled (pins on ESP32 are RX0=3, TX0=1). The variable timerid specifies the timer used (ESP32 and STM32 only) to drive the background processing (see below). A value of IBUSBM_NOTIMER disables the timer interrupt and you should call loop() yourself. Please note the default timer for STM32 is TIM1. If you are using
+TIM1 for something else (such as Servo or SoftwareSerial), please change the default.
 
 ```
 uint8_t addSensor(uint8_t type, uint8_t len=2); 

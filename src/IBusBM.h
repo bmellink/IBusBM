@@ -28,7 +28,6 @@
 #define IBUS_PRESS 0x41 // Pressure (in Pa)
 #define IBUS_SERVO 0xfd // Servo value
 
-#define IBUSBM_NOTIMER -1 // no timer interrupt used
 
 #if defined(ARDUINO_ARCH_MBED)
 #define HardwareSerial arduino::HardwareSerial
@@ -40,7 +39,16 @@ class Stream;
 class IBusBM {
 
 public:
+#if defined(_VARIANT_ARDUINO_STM32_)
+  #if !defined(STM32_CORE_VERSION) || (STM32_CORE_VERSION  < 0x01090000)
+    #error "Due to API change, this sketch is compatible with STM32_CORE_VERSION  >= 0x01090000"
+  #endif
+  #define IBUSBM_NOTIMER NULL // no timer interrupt used
+  void begin(HardwareSerial &serial, TIM_TypeDef * timerid=TIM1, int8_t rxPin=-1, int8_t txPin=-1);
+#else
+  #define IBUSBM_NOTIMER -1 // no timer interrupt used
   void begin(HardwareSerial &serial, int8_t timerid=0, int8_t rxPin=-1, int8_t txPin=-1);
+#endif
   uint16_t readChannel(uint8_t channelNr); // read servo channel 0..9
   uint8_t addSensor(uint8_t type, uint8_t len=2); // add sensor type and data length (2 or 4), returns address
   void setSensorMeasurement(uint8_t adr, int32_t value);

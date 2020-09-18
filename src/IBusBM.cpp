@@ -36,10 +36,6 @@ IBusBM* IBusBMfirst = NULL;
 SIGNAL(TIMER0_COMPA_vect) {
   if (IBusBMfirst) IBusBMfirst->loop();  // gets new servo values if available and process any sensor data
 }
-#elif defined _VARIANT_ARDUINO_STM32_
-void  onTimer(stimer_t *htim) {
-  if (IBusBMfirst) IBusBMfirst->loop();  // gets new servo values if available and process any sensor data
-}
 #else
 void  onTimer() {
   if (IBusBMfirst) IBusBMfirst->loop();  // gets new servo values if available and process any sensor data
@@ -84,7 +80,13 @@ extern "C" {
     Checksum: DA F3 -> calculated by adding up all previous bytes, total must be FFFF
  */
 
+
+#if defined(_VARIANT_ARDUINO_STM32_)
+void IBusBM::begin(HardwareSerial &serial, TIM_TypeDef * timerid, int8_t rxPin, int8_t txPin) {
+#else
 void IBusBM::begin(HardwareSerial &serial, int8_t timerid, int8_t rxPin, int8_t txPin) {
+#endif
+
   #ifdef ARDUINO_ARCH_ESP32
     serial.begin(115200, SERIAL_8N1, rxPin, txPin);
   #else
@@ -118,11 +120,11 @@ void IBusBM::begin(HardwareSerial &serial, int8_t timerid, int8_t rxPin, int8_t 
         timerAlarmWrite(timer, 1000, true);  //1 ms
         timerAlarmEnable(timer);
       #elif defined(_VARIANT_ARDUINO_STM32_)
-	      TIM_TypeDef * TIMER = TIM1; // Select timer, TODO convert (int8_t timerid) into: (TIM_TypeDef * TIMER = TIMx)
-        static stimer_t TimHandle; // Handler for stimer
-	      TimHandle.timer = TIMER; // Set TIMx instance.
-	      TimerHandleInit(&TimHandle, 1000 - 1, ((uint32_t)(getTimerClkFreq(TIMER) / (1000000)) - 1)); // Set TIMx timer to 1ms 
-	      attachIntHandle(&TimHandle, onTimer); // Attach onTimer interupt routine 
+        // see https://github.com/stm32duino/wiki/wiki/HardwareTimer-library
+        HardwareTimer *stimer_t = new HardwareTimer(timerid);
+        stimer_t->setOverflow(1000, HERTZ_FORMAT); // 1000 Hz
+        stimer_t->attachInterrupt(onTimer);
+        stimer_t->resume();
       #elif defined(ARDUINO_ARCH_MBED)
         NRF_TIMER4->TASKS_STOP = 1; // Stop timer
         NRF_TIMER4->MODE = TIMER_MODE_MODE_Timer;  // Set the timer in Counter Mode
