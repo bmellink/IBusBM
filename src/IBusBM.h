@@ -32,7 +32,9 @@
 #if defined(ARDUINO_ARCH_MBED)
 #define HardwareSerial arduino::HardwareSerial
 #else
+  #if !defined(ARDUINO_ARCH_MEGAAVR)
 class HardwareSerial;
+  #endif
 #endif
 class Stream;
 

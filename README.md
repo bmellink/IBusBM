@@ -15,7 +15,7 @@ Receivers with one iBUS pin typically send servo commands over the iBUS line, bu
 
 To install this library use the **Clone or download > Download ZIP** button on the repository home page and then install the library in your Arduino environment using **Sketch > Include Library > Add .ZIP Library...**
 
-This library supports AVR based Arduino boards (Arduino MEGA, UNO, Nano, Micro, etc.), ESP32 based boards (ESP32, NodeMCU, etc.), STM32 boards (STM32F103, etc.) and MBED (such as the Arduino NANO 33 BLE).
+This library supports AVR based Arduino boards (Arduino MEGA, UNO, Nano, Micro, etc.), ESP32 based boards (ESP32, NodeMCU, etc.), STM32 boards (STM32F103, etc.), MBED (such as the Arduino NANO 33 BLE) and MegaAVR.
 
 ### Prerequisites
 
