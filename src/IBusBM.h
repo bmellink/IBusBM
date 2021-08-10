@@ -29,7 +29,7 @@
 #define IBUS_SERVO 0xfd // Servo value
 
 
-#if defined(ARDUINO_ARCH_MBED)
+#if defined(ARDUINO_ARCH_MBED) || defined(__SAMD21G18A__)
 #define HardwareSerial arduino::HardwareSerial
 #else
   #if !defined(ARDUINO_ARCH_MEGAAVR)
@@ -67,7 +67,7 @@ private:
   static const uint8_t PROTOCOL_LENGTH = 0x20;
   static const uint8_t PROTOCOL_OVERHEAD = 3; // packet is <len><cmd><data....><chkl><chkh>, overhead=cmd+chk bytes
   static const uint8_t PROTOCOL_TIMEGAP = 3; // Packets are received very ~7ms so use ~half that for the gap
-  static const uint8_t PROTOCOL_CHANNELS = 14;
+  static const uint8_t PROTOCOL_CHANNELS = 18; // AFHDS 3 allows up to 18 channels, truncate this if we are using AFHDS 2A
   static const uint8_t PROTOCOL_COMMAND40 = 0x40;        // Command to set servo or motor speed is always 0x40
   static const uint8_t PROTOCOL_COMMAND_DISCOVER = 0x80; // Command discover sensor (lowest 4 bits are sensor)
   static const uint8_t PROTOCOL_COMMAND_TYPE = 0x90;     // Command discover sensor (lowest 4 bits are sensor)
