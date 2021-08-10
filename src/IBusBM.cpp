@@ -19,7 +19,8 @@
  * Created 12 March 2019 Bart Mellink
  * Updated 4 April 2019 to support ESP32
  * updated 13 jun 2019 to support STM32 (pauluzs)
- * Updated 21 Jul 2020 to support MBED (David Peverley) 
+ * Updated 21 Jul 2020 to support MBED (David Peverley)
+ * Updated 10 Aug 2021 to support SAMD (Neil Hutchison)
  */
 
 #include <Arduino.h>
@@ -34,6 +35,10 @@ IBusBM* IBusBMfirst = NULL;
 // we call the IBusSensor.loop() here, so we are certain we respond to sensor requests in a timely matter
 #ifdef ARDUINO_ARCH_AVR
 SIGNAL(TIMER0_COMPA_vect) {
+  if (IBusBMfirst) IBusBMfirst->loop();  // gets new servo values if available and process any sensor data
+}
+#elif defined _VARIANT_ARDUINO_STM32_
+void  onTimer(stimer_t *htim) {
   if (IBusBMfirst) IBusBMfirst->loop();  // gets new servo values if available and process any sensor data
 }
 #else
@@ -54,9 +59,16 @@ extern "C" {
 }
 #endif
 
+#if defined(__SAMD21G18A__)
+void TC5_Handler (void) {
+  onTimer();
+  TC5->COUNT16.INTFLAG.bit.MC0 = 1; //Writing a 1 to INTFLAG.bit.MC0 clears the interrupt so that it will run again
+}
+#endif
 
 /*
- *  supports max 14 channels in this lib (with messagelength of 0x20 there is room for 14 channels)
+ * AFHDS 2A 
+ * supports max 14 channels in this lib (with messagelength of 0x20 there is room for 14 channels)
 
   Example set of bytes coming over the iBUS line for setting servos: 
     20 40 DB 5 DC 5 54 5 DC 5 E8 3 D0 7 D2 5 E8 3 DC 5 DC 5 DC 5 DC 5 DC 5 DC 5 DA F3
@@ -79,7 +91,33 @@ extern "C" {
     Channel 13: DC 5 -> value 0x5DC
     Checksum: DA F3 -> calculated by adding up all previous bytes, total must be FFFF
  */
+ 
+ /*
+  *  AFHDS 3
+  *  supports max 18 channels in this lib 
+     (with messagelength of 0x20 there is room for 18 channels, since channels 14-18 are interleaved)
 
+  Example set of bytes coming over the iBUS line for setting servos: 
+    20 40 DB C5 DC B5 54 55 DC C5 E8 B3 D0 57 D2 C5 E8 B3 DC 55 DC C5 DC B5 DC 55 DC 5 DC 5 DA EC
+  Explanation
+    Protocol length: 20
+    Command code: 40 
+    Channel 0: DB c5  -> value 0x5DB (low 14)
+    Channel 1: DC b5  -> value 0x5Dc (mid 14)
+    Channel 2: 54 55  -> value 0x554 (high 14)
+    Channel 3: DC c5  -> value 0x5DC (low 15)
+    Channel 4: E8 b3  -> value 0x3E8 (mid 15)
+    Channel 5: D0 57  -> value 0x7D0 (high 15)
+    Channel 6: D2 c5  -> value 0x5D2 (low 16)
+    Channel 7: E8 b3  -> value 0x3E8 (mid 16)
+    Channel 8: DC 55  -> value 0x5DC (high 16)
+    Channel 9: DC c5  -> value 0x5DC (low 17)
+    Channel 10: DC b5 -> value 0x5DC (mid 17)
+    Channel 11: DC 55 -> value 0x5DC (high 17)
+    Channel 12: DC 05 -> value 0x5DC
+    Channel 13: DC 05 -> value 0x5DC
+    Checksum: DA F3 -> calculated by adding up all previous bytes, total must be FFFF
+ */
 
 #if defined(_VARIANT_ARDUINO_STM32_)
 void IBusBM::begin(HardwareSerial &serial, TIM_TypeDef * timerid, int8_t rxPin, int8_t txPin) {
@@ -144,9 +182,33 @@ void IBusBM::begin(HardwareSerial &serial, int8_t timerid, int8_t rxPin, int8_t 
         NVIC_EnableIRQ(TIMER4_IRQn);
 
         NRF_TIMER4->TASKS_START = 1;      // Start TIMER2
+      #elif defined(__SAMD21G18A__)
+	GCLK->CLKCTRL.reg = (uint16_t) (GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN_GCLK0 | GCLK_CLKCTRL_ID(GCM_TC4_TC5)) ;
+	while (GCLK->STATUS.bit.SYNCBUSY);
+	
+	TC5->COUNT16.CTRLA.reg = TC_CTRLA_SWRST;  // TC Reset
+	while (TC5->COUNT16.STATUS.reg & TC_STATUS_SYNCBUSY); //wait until TC5 is done syncing
+	while (TC5->COUNT16.CTRLA.bit.SWRST);
+	
+	TC5->COUNT16.CTRLA.reg |= TC_CTRLA_MODE_COUNT16; // Set Timer counter 5 Mode to 16 bits, it will become a 16bit counter ('mode1' in the datasheet)
+	TC5->COUNT16.CTRLA.reg |= TC_CTRLA_WAVEGEN_MFRQ; // Set TC5 waveform generation mode to 'match frequency'
+	TC5->COUNT16.CTRLA.reg |= TC_CTRLA_PRESCALER_DIV1 | TC_CTRLA_ENABLE; //set prescaler
+	TC5->COUNT16.CC[0].reg = (uint16_t) (SystemCoreClock / 1000);  // //set the compare-capture register to 1ms
+	while (TC5->COUNT16.STATUS.reg & TC_STATUS_SYNCBUSY);  //wait until TC5 is done syncing
+	
+	// Configure interrupt request
+	NVIC_DisableIRQ(TC5_IRQn);
+	NVIC_ClearPendingIRQ(TC5_IRQn);
+	NVIC_SetPriority(TC5_IRQn, 0);
+	NVIC_EnableIRQ(TC5_IRQn);
+       
+	TC5->COUNT16.INTENSET.bit.MC0 = 1; // Enable the TC5 interrupt request
+	while (TC5->COUNT16.STATUS.reg & TC_STATUS_SYNCBUSY); //wait until TC5 is done syncing
+	TC5->COUNT16.CTRLA.reg |= TC_CTRLA_ENABLE; // Start counter
+	while (TC5->COUNT16.STATUS.reg & TC_STATUS_SYNCBUSY); //wait until snyc'd
       #else
         // It should not be too difficult to support additional architectures as most have timer functions, but I only tested AVR and ESP32
-        #warning "Timing only supportted for AVR, ESP32 and STM32 architectures. Use timerid IBUSBM_NOTIMER"
+        #warning "Timing only supportted for AVR, ESP32, STM32 and SAMD21 architectures. Use timerid IBUSBM_NOTIMER"
       #endif
     #endif
   }
@@ -200,11 +262,46 @@ void IBusBM::loop(void) {
           // Checksum is all fine Execute command - 
           uint8_t adr = buffer[0] & 0x0f;
           if (buffer[0]==PROTOCOL_COMMAND40) {
+	    uint8_t pos = 1;
+	    uint8_t chan = 0;
+	    uint8_t chan_high = 14;
             // Valid servo command received - extract channel data
-            for (uint8_t i = 1; i < PROTOCOL_CHANNELS * 2 + 1; i += 2) {
-              channel[i / 2] = buffer[i] | (buffer[i + 1] << 8);
-            }
-            cnt_rec++;
+	    //for (uint8_t i = 1; i < PROTOCOL_CHANNELS * 2 + 1; i += 2) {
+	    //  channel[i / 2] = buffer[i] | (buffer[i + 1] << 8);
+	    //}
+	    //cnt_rec++;
+	    
+	    // This code is updated to work for AFHDS 3 ... but it also works for 2A, so we can replace the old code.
+	    // Given the interleaving it's a little more work
+	    for (int y=0; y<4; y++) {
+	      // From here on, we're looking at servo channel data ...
+	      // First channel // chan 15 byte 1
+	      channel[chan] = buffer[pos] | ((buffer[pos + 1] & 0x0f) << 8);
+	      pos++;
+	      chan++;
+	      channel[chan_high] = (buffer[pos] >> 4);
+	      pos++;
+	      // Second channel // chan 15 byte 2
+	      channel[chan] = buffer[pos] | ((buffer[pos + 1] & 0x0f) << 8);
+	      pos++;
+	      chan++;
+	      channel[chan_high] = channel[chan_high] | ((buffer[pos] >> 4) << 4);
+	      pos++;
+	      // Third channel // chan 15 byte 3
+	      channel[chan] = buffer[pos] | ((buffer[pos + 1] & 0x0f) << 8);
+	      pos++;
+	      chan++;
+	      channel[chan_high] = channel[chan_high] | ((buffer[pos] >> 4) << 8);
+	      chan_high++;
+	      pos++;
+	    }
+	    // Ok, we should be up to channel 12 /18 ... only 2 channels left.
+	    // Channels 12/13 are the last couple of bytes.
+	    for (int z=0; z<2; z++){
+	      channel[chan] = buffer[pos] | ((buffer[pos + 1] & 0x0f) << 8);
+	      pos+=2;
+	      chan++;
+	    }
           } else if (adr<=NumberSensors && adr>0 && len==1) {
 
             // all sensor data commands go here
