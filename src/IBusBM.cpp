@@ -1,32 +1,32 @@
 /*
  * Interface to the RC IBus protocol
- * 
+ *
  * Based on original work from: https://gitlab.com/timwilkinson/FlySkyIBus
  * Extended to also handle sensors/telemetry data to be sent back to the transmitter,
  * interrupts driven and other features.
  *
  * This lib requires a hardware UART for communication
  * Another version using software serial is here https://github.com/Hrastovc/iBUStelemetry
- * 
- * Explaination of sensor/ telemetry prtocol here: 
+ *
+ * Explanation of sensor/telemetry protocol here:
  * https://github.com/betaflight/betaflight/wiki/Single-wire-FlySky-(IBus)-telemetry
- * 
+ *
  * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public 
- * License as published by the Free Software Foundation; either  
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- *   
+ *
  * Created 12 March 2019 Bart Mellink
  * Updated 4 April 2019 to support ESP32
  * updated 13 jun 2019 to support STM32 (pauluzs)
- * Updated 21 Jul 2020 to support MBED (David Peverley) 
+ * Updated 21 Jul 2020 to support MBED (David Peverley)
  */
 
 #include <Arduino.h>
 #include "IBusBM.h"
 
 // pointer to the first class instance to be used to call the loop() method from timer interrupt
-// will be initiated by class constructor, then daisy channed to other class instances if we have more than one
+// will be initiated by class constructor, then daisy chained to other class instances if we have more than one
 IBusBM* IBusBMfirst = NULL;
 
 
@@ -46,7 +46,7 @@ void  onTimer() {
 #if defined(ARDUINO_ARCH_MBED)
 extern "C" {
   void TIMER4_IRQHandler_v() {
-    if (NRF_TIMER4->EVENTS_COMPARE[0] == 1) {   
+    if (NRF_TIMER4->EVENTS_COMPARE[0] == 1) {
         onTimer();
         NRF_TIMER4->EVENTS_COMPARE[0] = 0;
     }
@@ -58,11 +58,11 @@ extern "C" {
 /*
  *  supports max 14 channels in this lib (with messagelength of 0x20 there is room for 14 channels)
 
-  Example set of bytes coming over the iBUS line for setting servos: 
+  Example set of bytes coming over the iBUS line for setting servos:
     20 40 DB 5 DC 5 54 5 DC 5 E8 3 D0 7 D2 5 E8 3 DC 5 DC 5 DC 5 DC 5 DC 5 DC 5 DA F3
   Explanation
     Protocol length: 20
-    Command code: 40 
+    Command code: 40
     Channel 0: DB 5  -> value 0x5DB
     Channel 1: DC 5  -> value 0x5Dc
     Channel 2: 54 5  -> value 0x554
@@ -83,6 +83,8 @@ extern "C" {
 
 #if defined(_VARIANT_ARDUINO_STM32_)
 void IBusBM::begin(HardwareSerial &serial, TIM_TypeDef * timerid, int8_t rxPin, int8_t txPin) {
+#elif defined(TEENSY)
+void IBusBM::begin(HardwareSerial &serial, IntervalTimer* timerid, int8_t rxPin, int8_t txPin) {
 #else
 void IBusBM::begin(HardwareSerial &serial, int8_t timerid, int8_t rxPin, int8_t txPin) {
 #endif
@@ -113,7 +115,7 @@ void IBusBM::begin(HardwareSerial &serial, int8_t timerid, int8_t rxPin, int8_t 
       TIMSK0 |= _BV(OCIE0A);
     #else
       // on other architectures we need to use a time
-      #if defined(ARDUINO_ARCH_ESP32) 
+      #if defined(ARDUINO_ARCH_ESP32)
         hw_timer_t * timer = NULL;
         timer = timerBegin(timerid, F_CPU / 1000000L, true); // defaults to timer_id = 0; divider=80 (1 ms); countUp = true;
         timerAttachInterrupt(timer, &onTimer, true); // edge = true
@@ -132,34 +134,38 @@ void IBusBM::begin(HardwareSerial &serial, int8_t timerid, int8_t rxPin, int8_t 
         NRF_TIMER2->TASKS_CLEAR = 1;               // clear the task first to be usable for later
 
         // Set prescaler & compare register.
-        // Prescaler = 0 gives 16MHz timer. 
-        // Prescaler = 4 (2^4) gives 1MHz timer. 
-        NRF_TIMER4->PRESCALER = 4 << TIMER_PRESCALER_PRESCALER_Pos;  
-        NRF_TIMER4->CC[0] = 1000; 
-  
+        // Prescaler = 0 gives 16MHz timer.
+        // Prescaler = 4 (2^4) gives 1MHz timer.
+        NRF_TIMER4->PRESCALER = 4 << TIMER_PRESCALER_PRESCALER_Pos;
+        NRF_TIMER4->CC[0] = 1000;
+
         // Enable interrupt on Timer 4 for CC[0] compare match events
         NRF_TIMER4->INTENSET = TIMER_INTENSET_COMPARE0_Enabled << TIMER_INTENSET_COMPARE0_Pos;
         NRF_TIMER4->SHORTS = TIMER_SHORTS_COMPARE0_CLEAR_Enabled << TIMER_SHORTS_COMPARE0_CLEAR_Pos;
- 
+
         NVIC_EnableIRQ(TIMER4_IRQn);
 
         NRF_TIMER4->TASKS_START = 1;      // Start TIMER2
+
+      #elif defined(TEENSY)
+        timerid = new IntervalTimer();
+        timerid->begin(onTimer, 1000);  // Execute onTimer() every 1000us (1ms)
       #else
         // It should not be too difficult to support additional architectures as most have timer functions, but I only tested AVR and ESP32
-        #warning "Timing only supportted for AVR, ESP32 and STM32 architectures. Use timerid IBUSBM_NOTIMER"
+        #warning "Timing only supported for AVR, ESP32, and STM32 architectures. Use timerid IBUSBM_NOTIMER"
       #endif
     #endif
   }
-  IBusBMfirst = this; 
+  IBusBMfirst = this;
 }
 
 // called from timer interrupt or mannually by user (if IBUSBM_NOTIMER set in begin())
 void IBusBM::loop(void) {
 
   // if we have multiple instances of IBusBM, we (recursively) call the other instances loop() function
-  if (IBusBMnext) IBusBMnext->loop(); 
+  if (IBusBMnext) IBusBMnext->loop();
 
-  // only process data already in our UART receive buffer 
+  // only process data already in our UART receive buffer
   while (stream->available() > 0) {
     // only consider a new data package if we have not heard anything for >3ms
     uint32_t now = millis();
@@ -167,7 +173,7 @@ void IBusBM::loop(void) {
       state = GET_LENGTH;
     }
     last = now;
-    
+
     uint8_t v = stream->read();
     switch (state) {
       case GET_LENGTH:
@@ -188,7 +194,7 @@ void IBusBM::loop(void) {
           state = GET_CHKSUML;
         }
         break;
-        
+
       case GET_CHKSUML:
         lchksum = v;
         state = GET_CHKSUMH;
@@ -197,7 +203,7 @@ void IBusBM::loop(void) {
       case GET_CHKSUMH:
         // Validate checksum
         if (chksum == (v << 8) + lchksum) {
-          // Checksum is all fine Execute command - 
+          // Checksum is all fine Execute command -
           uint8_t adr = buffer[0] & 0x0f;
           if (buffer[0]==PROTOCOL_COMMAND40) {
             // Valid servo command received - extract channel data
@@ -215,14 +221,14 @@ void IBusBM::loop(void) {
            delayMicroseconds(100);
             switch (buffer[0] & 0x0f0) {
               case PROTOCOL_COMMAND_DISCOVER: // 0x80, discover sensor
-                cnt_poll++;  
-                // echo discover command: 0x04, 0x81, 0x7A, 0xFF 
+                cnt_poll++;
+                // echo discover command: 0x04, 0x81, 0x7A, 0xFF
                 stream->write(0x04);
                 stream->write(PROTOCOL_COMMAND_DISCOVER + adr);
                 chksum = 0xFFFF - (0x04 + PROTOCOL_COMMAND_DISCOVER + adr);
                 break;
               case PROTOCOL_COMMAND_TYPE: // 0x90, send sensor type
-                // echo sensortype command: 0x06 0x91 0x00 0x02 0x66 0xFF 
+                // echo sensortype command: 0x06 0x91 0x00 0x02 0x66 0xFF
                 stream->write(0x06);
                 stream->write(PROTOCOL_COMMAND_TYPE + adr);
                 stream->write(s->sensorType);
@@ -232,20 +238,20 @@ void IBusBM::loop(void) {
               case PROTOCOL_COMMAND_VALUE: // 0xA0, send sensor data
                 cnt_sensor++;
                 uint8_t t;
-                // echo sensor value command: 0x06 0x91 0x00 0x02 0x66 0xFF 
+                // echo sensor value command: 0x06 0x91 0x00 0x02 0x66 0xFF
                 stream->write(t = 0x04 + s->sensorLength);
                 chksum = 0xFFFF - t;
                 stream->write(t = PROTOCOL_COMMAND_VALUE + adr);
                 chksum -= t;
                 stream->write(t = s->sensorValue & 0x0ff);
                 chksum -= t;
-                stream->write(t = (s->sensorValue >> 8) & 0x0ff); 
+                stream->write(t = (s->sensorValue >> 8) & 0x0ff);
                 chksum -= t;
                 if (s->sensorLength==4) {
-                  stream->write(t = (s->sensorValue >> 16) & 0x0ff); 
+                  stream->write(t = (s->sensorValue >> 16) & 0x0ff);
                   chksum -= t;
-                  stream->write(t = (s->sensorValue >> 24) & 0x0ff); 
-                  chksum -= t;                  
+                  stream->write(t = (s->sensorValue >> 24) & 0x0ff);
+                  chksum -= t;
                 }
                 break;
               default:
@@ -254,7 +260,7 @@ void IBusBM::loop(void) {
             }
             if (adr>0) {
               stream->write(chksum & 0x0ff);
-              stream->write(chksum >> 8);              
+              stream->write(chksum >> 8);
             }
           }
         }
@@ -293,4 +299,3 @@ void IBusBM::setSensorMeasurement(uint8_t adr, int32_t value) {
    if (adr<=NumberSensors && adr>0)
      sensors[adr-1].sensorValue = value;
 }
-
