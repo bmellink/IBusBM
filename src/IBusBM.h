@@ -49,7 +49,7 @@ public:
   #if !defined(STM32_CORE_VERSION) || (STM32_CORE_VERSION  < 0x01090000)
     #error "Due to API change, this sketch is compatible with STM32_CORE_VERSION  >= 0x01090000"
   #endif
-  #define IBUSBM_NOTIMER NULL // no timer interrupt used
+  #define IBUSBM_NOTIMER -1 // no timer interrupt used
   void begin(HardwareSerial &serial, TIM_TypeDef * timerid=TIM1, int8_t rxPin=-1, int8_t txPin=-1);
 #else
   #if defined(TEENSY)
