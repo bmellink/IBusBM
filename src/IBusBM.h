@@ -16,7 +16,14 @@
 #if defined(ARDUINO_ARCH_MBED)
 #include "mbed.h"
 #include "HardwareSerial.h"
+
+// Teensy:        3.0        ||             3.1/3.2    ||             3.5        ||             3.6        ||             LC        ||          4.0 (Beta)    ||             4.1
+#elif defined(__MK20DX128__) || defined(__MK20DX256__) || defined(__MK64FX512__) || defined(__MK66FX1M0__) || defined(__MKL26Z64__) || defined(__IMXRT1052__) || defined(__IMXRT1062__)
+#define TEENSY
+#include "IntervalTimer.h"
+#include "HardwareSerial.h"
 #endif
+
 
 // if you have an opentx transciever you can add additional sensor types here.
 // see https://github.com/cleanflight/cleanflight/blob/7cd417959b3cb605aa574fc8c0f16759943527ef/src/main/telemetry/ibus_shared.h
@@ -28,10 +35,7 @@
 #define IBUS_PRESS 0x41 // Pressure (in Pa)
 #define IBUS_SERVO 0xfd // Servo value
 
-// Teensy:        3.0        ||             3.1/3.2    ||             3.5        ||             3.6        ||             LC        ||          4.0 (Beta)    ||             4.1
-#if defined(__MK20DX128__) || defined(__MK20DX256__) || defined(__MK64FX512__) || defined(__MK66FX1M0__) || defined(__MKL26Z64__) || defined(__IMXRT1052__) || defined(__IMXRT1062__)
-#define TEENSY
-#endif
+
 
 #if defined(ARDUINO_ARCH_MBED)
 #define HardwareSerial arduino::HardwareSerial
@@ -45,15 +49,15 @@ class Stream;
 class IBusBM {
 
 public:
-#if defined(_VARIANT_ARDUINO_STM32_)
+#if defined(_VARIANT_ARDUINO_STM32_) && !defined(TEENSY)
   #if !defined(STM32_CORE_VERSION) || (STM32_CORE_VERSION  < 0x01090000)
     #error "Due to API change, this sketch is compatible with STM32_CORE_VERSION  >= 0x01090000"
   #endif
-  #define IBUSBM_NOTIMER -1 // no timer interrupt used
+  #define IBUSBM_NOTIMER NULL // no timer interrupt used
   void begin(HardwareSerial &serial, TIM_TypeDef * timerid=TIM1, int8_t rxPin=-1, int8_t txPin=-1);
 #else
   #if defined(TEENSY)
-    #define IBUSBM_NOTIMER NULL // Timer interrupt is used.
+    #define IBUSBM_NOTIMER -1 // Timer interrupt is used.
     void begin(HardwareSerial &serial, IntervalTimer* timerid, int8_t rxPin=-1, int8_t txPin=-1);
   #else
     #define IBUSBM_NOTIMER -1 // no timer interrupt used

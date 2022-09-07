@@ -113,6 +113,9 @@ void IBusBM::begin(HardwareSerial &serial, int8_t timerid, int8_t rxPin, int8_t 
       // on AVR architectures Timer0 is already used for millis() - we'll just interrupt somewhere in the middle and call the TIMER0_COMPA_vect interrupt
       OCR0A = 0xAF;
       TIMSK0 |= _BV(OCIE0A);
+    #elif defined(TEENSY)
+      timerid = new IntervalTimer;
+      timerid->begin(onTimer, 1000);  // Execute onTimer() every 1000us (1ms)
     #else
       // on other architectures we need to use a time
       #if defined(ARDUINO_ARCH_ESP32)
@@ -147,9 +150,7 @@ void IBusBM::begin(HardwareSerial &serial, int8_t timerid, int8_t rxPin, int8_t 
 
         NRF_TIMER4->TASKS_START = 1;      // Start TIMER2
 
-      #elif defined(TEENSY)
-        timerid = new IntervalTimer();
-        timerid->begin(onTimer, 1000);  // Execute onTimer() every 1000us (1ms)
+
       #else
         // It should not be too difficult to support additional architectures as most have timer functions, but I only tested AVR and ESP32
         #warning "Timing only supported for AVR, ESP32, and STM32 architectures. Use timerid IBUSBM_NOTIMER"
