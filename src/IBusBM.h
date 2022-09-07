@@ -1,11 +1,11 @@
 /*
  * Interface to the RC IBus protocol
- * 
+ *
  * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public 
- * License as published by the Free Software Foundation; either  
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- *   
+ *
  * Created 12 March 2019 Bart Mellink
  */
 #ifndef IBusBM_h
@@ -16,7 +16,14 @@
 #if defined(ARDUINO_ARCH_MBED)
 #include "mbed.h"
 #include "HardwareSerial.h"
+
+// Teensy:        3.0        ||             3.1/3.2    ||             3.5        ||             3.6        ||             LC        ||          4.0 (Beta)    ||             4.1
+#elif defined(__MK20DX128__) || defined(__MK20DX256__) || defined(__MK64FX512__) || defined(__MK66FX1M0__) || defined(__MKL26Z64__) || defined(__IMXRT1052__) || defined(__IMXRT1062__)
+#define TEENSY
+#include "IntervalTimer.h"
+#include "HardwareSerial.h"
 #endif
+
 
 // if you have an opentx transciever you can add additional sensor types here.
 // see https://github.com/cleanflight/cleanflight/blob/7cd417959b3cb605aa574fc8c0f16759943527ef/src/main/telemetry/ibus_shared.h
@@ -29,10 +36,11 @@
 #define IBUS_SERVO 0xfd // Servo value
 
 
+
 #if defined(ARDUINO_ARCH_MBED)
 #define HardwareSerial arduino::HardwareSerial
 #else
-  #if !defined(ARDUINO_ARCH_MEGAAVR)
+  #if !defined(ARDUINO_ARCH_MEGAAVR) && !defined(TEENSY)
 class HardwareSerial;
   #endif
 #endif
@@ -41,26 +49,31 @@ class Stream;
 class IBusBM {
 
 public:
-#if defined(_VARIANT_ARDUINO_STM32_)
+#if defined(_VARIANT_ARDUINO_STM32_) && !defined(TEENSY)
   #if !defined(STM32_CORE_VERSION) || (STM32_CORE_VERSION  < 0x01090000)
     #error "Due to API change, this sketch is compatible with STM32_CORE_VERSION  >= 0x01090000"
   #endif
   #define IBUSBM_NOTIMER NULL // no timer interrupt used
   void begin(HardwareSerial &serial, TIM_TypeDef * timerid=TIM1, int8_t rxPin=-1, int8_t txPin=-1);
 #else
-  #define IBUSBM_NOTIMER -1 // no timer interrupt used
-  void begin(HardwareSerial &serial, int8_t timerid=0, int8_t rxPin=-1, int8_t txPin=-1);
+  #if defined(TEENSY)
+    #define IBUSBM_NOTIMER -1 // Timer interrupt is used.
+    void begin(HardwareSerial &serial, IntervalTimer* timerid, int8_t rxPin=-1, int8_t txPin=-1);
+  #else
+    #define IBUSBM_NOTIMER -1 // no timer interrupt used
+    void begin(HardwareSerial &serial, int8_t timerid=0, int8_t rxPin=-1, int8_t txPin=-1);
+  #endif
 #endif
   uint16_t readChannel(uint8_t channelNr); // read servo channel 0..9
   uint8_t addSensor(uint8_t type, uint8_t len=2); // add sensor type and data length (2 or 4), returns address
   void setSensorMeasurement(uint8_t adr, int32_t value);
 
   void loop(void); // used internally for interrupt handline, but needs to be defined as public
-  
+
   volatile uint8_t cnt_poll; // count received number of sensor poll messages
   volatile uint8_t cnt_sensor; // count times a sensor value has been sent back
   volatile uint8_t cnt_rec; // count received number of servo messages
-  
+
 private:
   enum State {GET_LENGTH, GET_DATA, GET_CHKSUML, GET_CHKSUMH, DISCARD};
 
@@ -73,7 +86,7 @@ private:
   static const uint8_t PROTOCOL_COMMAND_TYPE = 0x90;     // Command discover sensor (lowest 4 bits are sensor)
   static const uint8_t PROTOCOL_COMMAND_VALUE = 0xA0;    // Command send sensor data (lowest 4 bits are sensor)
   static const uint8_t SENSORMAX = 10; // Max number of sensors
-  
+
   uint8_t state;                    // state machine state for iBUS protocol
   HardwareSerial *stream;           // serial port
   uint32_t last;                    // milis() of prior message
