@@ -90,7 +90,7 @@ void IBusBM::begin(HardwareSerial &serial, int8_t timerid, int8_t rxPin, int8_t 
   #ifdef ARDUINO_ARCH_ESP32
     serial.begin(115200, SERIAL_8N1, rxPin, txPin);
   #else
-    serial.begin(115200, SERIAL_8N1);
+    serial.begin(115200);
   #endif
 
   this->stream = &serial;
