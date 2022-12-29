@@ -90,7 +90,7 @@ private:
   } sensorinfo;
   sensorinfo sensors[SENSORMAX];
   uint8_t NumberSensors = 0;        // number of sensors
-  IBusBM* IBusBMnext = NULL;        // pointer to the next class instance to be used to call the loop() method from timer interrupt
+  IBusBM* IBusBMnext = nullptr;        // pointer to the next class instance to be used to call the loop() method from timer interrupt
 };
 
 #endif
