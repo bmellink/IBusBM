@@ -19,11 +19,16 @@
  * Created 12 March 2019 Bart Mellink
  * Updated 4 April 2019 to support ESP32
  * updated 13 jun 2019 to support STM32 (pauluzs)
- * Updated 21 Jul 2020 to support MBED (David Peverley) 
+ * Updated 21 Jul 2020 to support MBED (David Peverley)
+ * Updated 3 Aug 2024 to support ESP8266 (agustinbene) 
  */
 
 #include <Arduino.h>
 #include "IBusBM.h"
+
+#ifdef ARDUINO_ARCH_ESP8266
+#include <user_interface.h>
+#endif
 
 // pointer to the first class instance to be used to call the loop() method from timer interrupt
 // will be initiated by class constructor, then daisy channed to other class instances if we have more than one
@@ -35,6 +40,10 @@ IBusBM* IBusBMfirst = NULL;
 #ifdef ARDUINO_ARCH_AVR
 SIGNAL(TIMER0_COMPA_vect) {
   if (IBusBMfirst) IBusBMfirst->loop();  // gets new servo values if available and process any sensor data
+}
+#elif defined(ARDUINO_ARCH_ESP8266)
+void ICACHE_RAM_ATTR onTimerISR() {
+  if (IBusBMfirst) IBusBMfirst->loop();
 }
 #else
 void  onTimer() {
@@ -119,6 +128,10 @@ void IBusBM::begin(HardwareSerial &serial, int8_t timerid, int8_t rxPin, int8_t 
         timerAttachInterrupt(timer, &onTimer, true); // edge = true
         timerAlarmWrite(timer, 1000, true);  //1 ms
         timerAlarmEnable(timer);
+      #elif defined(ARDUINO_ARCH_ESP8266)
+        os_timer_t *timer = new os_timer_t;
+        os_timer_setfn(timer, reinterpret_cast<os_timer_func_t*>(onTimerISR), NULL);
+        os_timer_arm(timer, 1, true);  // 1ms interval, repeating
       #elif defined(_VARIANT_ARDUINO_STM32_)
         // see https://github.com/stm32duino/wiki/wiki/HardwareTimer-library
         HardwareTimer *stimer_t = new HardwareTimer(timerid);
@@ -146,7 +159,7 @@ void IBusBM::begin(HardwareSerial &serial, int8_t timerid, int8_t rxPin, int8_t 
         NRF_TIMER4->TASKS_START = 1;      // Start TIMER2
       #else
         // It should not be too difficult to support additional architectures as most have timer functions, but I only tested AVR and ESP32
-        #warning "Timing only supportted for AVR, ESP32 and STM32 architectures. Use timerid IBUSBM_NOTIMER"
+        #warning "Timing only supportted for AVR, ESP32, ESP8266 and STM32 architectures. Use timerid IBUSBM_NOTIMER"
       #endif
     #endif
   }
