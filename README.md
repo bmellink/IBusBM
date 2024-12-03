@@ -5,7 +5,7 @@ The iBUS protocol is a half-duplex protocol developed by Flysky to control multi
 
 The protocol can also connect sensors to send back telemetry information to a RC transceiver. Depending on your transmitter you can use multiple sensors. You can define up to 10 sensors using this library. The Turnigy FS-MT6 only supports voltage, temperature, motor speed and pressure, but OpenTX based receivers support a long list of sensors, which can all be used by passing the right sensor ID to the addSensor() function.
 
-This library was written and tested for the TGY-IA6B receiver and should work for other receivers too (such as the FS-iA10 and TGY-iA10).
+This library was written and tested for the TGY-IA6B receiver and is confirmed to work with the FS-iA10B receiver using FlySky i6X 10ch controller. This librairy should work for other receivers too (TGY-iA10).
 The TGY-IA6B has 2 iBUS pins: one for the servos (only output) and one for the sensors/telemetry
 (which uses a half-duplex protocol to switch between output and input to poll for sensor data).
 
